@@ -1,0 +1,14 @@
+---
+# Optional overlay: use your own Postgres and Redis instead of bundled containers.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.external.yml up -d
+#
+# Set DATABASE_URL, SYNC_DATABASE_URL, REDIS_URL, CELERY_BROKER_URL and
+# CELERY_RESULT_BACKEND in .env before starting (see README).
+
+services:
+  postgres:
+    profiles: ["bundled-datastores"]
+
+  redis:
+    profiles: ["bundled-datastores"]

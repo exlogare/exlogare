@@ -1,0 +1,338 @@
+
+
+[exlogare.net](https://exlogare.net) · [Документация](https://exlogare.net/docs) · [English](./README.md)
+
+
+
+# Exlogare Community Edition
+
+Open-source Community Edition Exlogare — self-hosted анализ падений CI/CD с AI root-cause отчётами. Развёртывание через Docker Compose.
+
+## Быстрый старт
+
+```bash
+cp .env.example .env
+# Заполните секреты — см. раздел «Переменные окружения» ниже
+
+./scripts/generate_secrets.sh .env.example   # опционально: вывести секреты в stdout
+
+docker compose up -d --build
+```
+
+Откройте `http://localhost:8080` (или ваш `WEB_PORT`), войдите с `ADMIN_EMAIL` / `ADMIN_PASSWORD`, подключите GitLab, GitHub, Jenkins или generic ingest.
+
+Готовые образы без локальной сборки:
+
+```bash
+export IMAGE_TAG=latest          # или latest-dev / 1.0.0 / …
+docker compose pull && docker compose up -d
+```
+
+## Возможности
+
+- **Интеграции CI** — GitLab, GitHub, Bitbucket, GitFlic, Jenkins, generic ingest
+- **AI root-cause analysis** — любой OpenAI-compatible LLM (OpenAI, Ollama, vLLM, LiteLLM, Azure, DashScope, …)
+- **Dashboard** — анализы, повторяющиеся падения, статистика по проектам
+- **Docker Compose** — postgres, redis, api, worker, beat, web
+
+## Docker-образы
+
+Публикуются в GHCR:
+
+
+| Образ                           | Назначение                   |
+| ------------------------------- | ---------------------------- |
+| `ghcr.io/exlogare/exlogare-api` | FastAPI + Celery worker/beat |
+| `ghcr.io/exlogare/exlogare-web` | nginx + SPA                  |
+
+
+Задайте `IMAGE_TAG` в `.env`: `latest`, `latest-dev`, `latest-test` или зафиксированный релиз (например `1.0.0`).
+
+## Архитектура
+
+```
+web (nginx + SPA)  →  api (FastAPI + init_db)
+                         ↓
+                    postgres, redis
+                         ↓
+                    worker, beat (Celery)
+```
+
+При каждом старте API `scripts/entrypoint-api.sh` выполняет `python -m app.core.init_db` (идемпотентно: `create_all` + bootstrap admin, если таблица `users` пуста).
+
+## Свой Postgres и Redis
+
+По умолчанию Compose поднимает контейнеры `postgres` и `redis`. Чтобы использовать **свои** managed-сервисы (RDS, Cloud SQL, ElastiCache, Memorystore, …):
+
+**1.** Создайте базу PostgreSQL (**16+** рекомендуется) и Redis. Exlogare использует **три logical DB** на одном Redis:
+
+| Переменная | Redis DB | Назначение |
+|------------|----------|------------|
+| `REDIS_URL` | `0` | Кэш приложения, rate limit, heartbeat |
+| `CELERY_BROKER_URL` | `1` | Брокер Celery |
+| `CELERY_RESULT_BACKEND` | `2` | Результаты задач Celery |
+
+**2.** Пропишите URL в `.env` (спецсимволы в пароле — URL-encode):
+
+```env
+DATABASE_URL=postgresql+asyncpg://exlogare:secret@db.internal:5432/exlogare
+SYNC_DATABASE_URL=postgresql+psycopg2://exlogare:secret@db.internal:5432/exlogare
+REDIS_URL=redis://:redis-secret@redis.internal:6379/0
+CELERY_BROKER_URL=redis://:redis-secret@redis.internal:6379/1
+CELERY_RESULT_BACKEND=redis://:redis-secret@redis.internal:6379/2
+```
+
+- `DATABASE_URL` — async-драйвер для FastAPI (`asyncpg`)
+- `SYNC_DATABASE_URL` — sync-драйвер для Celery (`psycopg2`)
+
+**3.** Запуск без bundled Postgres/Redis:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.external.yml up -d
+```
+
+Сервисы `postgres` и `redis` из стека не стартуют — только `api`, `worker`, `beat`, `web`.
+
+**4.** Сеть — контейнеры должны достучаться до ваших хостов БД/Redis:
+
+- общая VPC / Docker-сеть с базами
+- `host.docker.internal` для сервисов на хосте Docker (Linux: добавьте `extra_hosts: ["host.docker.internal:host-gateway"]` в `api`, `worker`, `beat` через local override)
+- private IP managed-сервисов, доступный с машины, где крутится Compose
+
+**TLS** — для Postgres добавьте query-параметры, если провайдер требует SSL, например `?ssl=require` (смотрите документацию провайдера).
+
+Для bundled-стека по умолчанию **не задавайте** эти пять URL — Compose соберёт их из `POSTGRES_*` и имён сервисов `postgres` / `redis`.
+
+## Разработка
+
+```bash
+pip install -e ".[dev]"
+LLM_ENABLED=false JWT_SECRET=dev ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" \
+  python -m app.core.init_db
+uvicorn app.main:app --reload --port 8000
+
+cd web && npm install && npm run dev
+```
+
+---
+
+## Переменные окружения
+
+Скопируйте `.env.example` в `.env`. Переменные соответствуют `app/core/config.py`.  
+По умолчанию `docker-compose.yml` собирает `DATABASE_URL`, `REDIS_URL` и URL Celery из `POSTGRES_*` и имён сервисов. Для внешних Postgres/Redis задайте пять URL в `.env` и запускайте с `docker-compose.external.yml` — см. [Свой Postgres и Redis](#свой-postgres-и-redis).
+
+Обозначения: **обязательно** = нужно перед первым prod-запуском; **bootstrap** = только при пустой БД; **опционально** = можно оставить по умолчанию.
+
+### Образы и веб
+
+
+| Переменная        | По умолчанию            | Описание                                                                                               |
+| ----------------- | ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| `IMAGE_TAG`       | `latest`                | Docker-тег для `ghcr.io/exlogare/exlogare-api` и `exlogare-web`. Примеры: `latest-dev`, `1.0.0`.       |
+| `WEB_PORT`        | `8080`                  | Порт на хосте для web-контейнера (nginx).                                                              |
+| `PUBLIC_BASE_URL` | `http://localhost:8080` | Публичный URL API для вебхуков и OAuth. Должен совпадать с тем, как пользователи открывают приложение. |
+| `WEB_BASE_URL`    | `http://localhost:8080` | Origin SPA для CORS и ссылок в письмах. В single-host compose обычно совпадает с `PUBLIC_BASE_URL`.    |
+| `APP_ENV`         | `prod`                  | `dev`, `test`, `staging` или `prod`. Влияет на `/docs`, CORS, trusted hosts.                           |
+
+
+### База данных (Postgres)
+
+
+| Переменная          | По умолчанию | Описание                                                                             |
+| ------------------- | ------------ | ------------------------------------------------------------------------------------ |
+| `POSTGRES_USER`     | `exlogare`   | Роль Postgres. Используется сервисом `postgres` и подставляется в URL API в compose. |
+| `POSTGRES_PASSWORD` | —            | **обязательно** Пароль Postgres. Сгенерировать: `scripts/generate_secrets.sh`.       |
+| `POSTGRES_DB`       | `exlogare`   | Имя базы данных.                                                                     |
+| `DATABASE_URL`      | *(compose)*  | Async URL SQLAlchemy (`postgresql+asyncpg://…`). Обязателен для внешнего Postgres — см. [Свой Postgres и Redis](#свой-postgres-и-redis). |
+| `SYNC_DATABASE_URL` | *(compose)*  | Sync URL для Celery (`postgresql+psycopg2://…`). Обязателен с внешним Postgres. |
+
+
+### Redis и Celery
+
+
+| Переменная              | По умолчанию | Описание                                   |
+| ----------------------- | ------------ | ------------------------------------------ |
+| `REDIS_URL`             | *(compose)*  | Redis: кэш, rate limit, heartbeat. DB index `0`. Для внешнего Redis.     |
+| `CELERY_BROKER_URL`     | *(compose)*  | Брокер Celery. DB index `1`. Для внешнего Redis. |
+| `CELERY_RESULT_BACKEND` | *(compose)*  | Backend результатов Celery. DB index `2`. Для внешнего Redis. |
+
+
+### Секреты и аутентификация
+
+
+| Переменная                  | По умолчанию | Описание                                                                                                                                                                        |
+| --------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `JWT_SECRET`                | —            | **обязательно** HMAC-секрет для JWT-сессий в cookie. Длинная случайная строка.                                                                                                  |
+| `ENCRYPTION_KEY`            | —            | **обязательно** Fernet-ключ (base64) для шифрования OAuth-токенов в БД. Генерация: `python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`. |
+| `JWT_EXPIRES_MINUTES`       | `10080`      | Время жизни JWT/сессии (7 дней).                                                                                                                                                |
+| `LOGIN_RATE_LIMIT_PER_HOUR` | `30`         | Лимит попыток входа на email в час (защита от brute-force).                                                                                                                     |
+
+
+### Bootstrap admin
+
+
+| Переменная          | По умолчанию | Описание                                                                                                        |
+| ------------------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
+| `ADMIN_EMAIL`       | —            | **bootstrap** Email администратора. Обязателен при первом запуске (пустая таблица `users`); далее игнорируется. |
+| `ADMIN_PASSWORD`    | —            | **bootstrap** Пароль admin (мин. 8 символов). При перезапуске не меняется.                                      |
+| `ADMIN_TENANT_NAME` | `Default`    | **bootstrap** Название начальной организации/tenant.                                                            |
+
+
+### Хранение данных
+
+
+| Переменная       | По умолчанию | Описание                                                                |
+| ---------------- | ------------ | ----------------------------------------------------------------------- |
+| `RETENTION_DAYS` | `365`        | Срок хранения анализов и истории. Ежедневная очистка через Celery beat. |
+
+
+### LLM (OpenAI-compatible)
+
+
+| Переменная                 | По умолчанию   | Описание                                                                                                             |
+| -------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `LLM_ENABLED`              | `true`         | `false` → `StubAnalyzer` (без реального AI; только dev/test).                                                        |
+| `LLM_BASE_URL`             | *(пусто)*      | Base URL OpenAI-compatible API. Пусто = `https://api.openai.com/v1`.                                                 |
+| `LLM_API_KEY`              | —              | API-ключ endpoint'а. Для Ollama/local — любое непустое значение (напр. `ollama`).                                    |
+| `LLM_MODEL`                | `gpt-4o-mini`  | Имя модели на выбранном endpoint.                                                                                    |
+| `LLM_TEMPERATURE`          | `0.1`          | Temperature сэмплирования.                                                                                           |
+| `LLM_MAX_TOKENS`           | `600`          | Максимум токенов в ответе.                                                                                           |
+| `LLM_JSON_MODE`            | `true`         | Запрашивать `response_format=json_object`. `false`, если endpoint не поддерживает JSON mode (есть fallback-парсинг). |
+| `LLM_TAIL_LINES`           | `500`          | Сколько последних строк лога отправлять в модель.                                                                    |
+| `LLM_TOKEN_BUDGET`         | `2500`         | Приблизительный бюджет токенов на excerpt лога.                                                                      |
+| `LLM_SYSTEM_PROMPT`        | —              | **обязательно при `LLM_ENABLED=true`** System prompt inline. `\n` для переносов строк.                               |
+| `LLM_SYSTEM_PROMPT_FILE`   | —              | Альтернатива inline: путь к файлу внутри контейнера (напр. смонтировать `/config/system_prompt.txt`).                |
+| `LLM_USER_PROMPT_TEMPLATE` | *(встроенный)* | Шаблон с `{header}`, `{log_excerpt}`, `{project_path}`.                                                              |
+
+
+**Примеры LLM backend**
+
+
+| Backend   | `LLM_BASE_URL`                                           | `LLM_MODEL`    | `LLM_API_KEY` |
+| --------- | -------------------------------------------------------- | -------------- | ------------- |
+| OpenAI    | *(пусто)*                                                | `gpt-4o-mini`  | `sk-…`        |
+| Ollama    | `http://host.docker.internal:11434/v1`                   | `llama3.1`     | `ollama`      |
+| vLLM      | `http://vllm:8000/v1`                                    | `meta-llama/…` | `local`       |
+| LiteLLM   | `http://litellm:4000/v1`                                 | `gpt-4o`       | ключ прокси   |
+| DashScope | `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` | `qwen-plus`    | dashscope key |
+
+
+### GitLab (опционально)
+
+
+| Переменная                   | По умолчанию         | Описание                                                                 |
+| ---------------------------- | -------------------- | ------------------------------------------------------------------------ |
+| `GITLAB_BASE_URL`            | `https://gitlab.com` | URL GitLab (self-managed: `https://gitlab.company.com`).                 |
+| `GITLAB_OAUTH_CLIENT_ID`     | —                    | ID OAuth-приложения.                                                     |
+| `GITLAB_OAUTH_CLIENT_SECRET` | —                    | Secret OAuth-приложения.                                                 |
+| `GITLAB_OAUTH_REDIRECT_URI`  | —                    | Callback URL в настройках OAuth; по умолчанию через nginx на порту 8080. |
+| `GITLAB_WEBHOOK_SECRET`      | —                    | Shared secret для проверки webhook GitLab.                               |
+
+
+### GitHub (опционально)
+
+
+| Переменная                    | По умолчанию             | Описание                                              |
+| ----------------------------- | ------------------------ | ----------------------------------------------------- |
+| `GITHUB_BASE_URL`             | `https://github.com`     | GitHub.com или GHES.                                  |
+| `GITHUB_API_BASE_URL`         | `https://api.github.com` | REST API (GHES: `https://github.company.com/api/v3`). |
+| `GITHUB_OAUTH_CLIENT_ID`      | —                        | Client ID OAuth App.                                  |
+| `GITHUB_OAUTH_CLIENT_SECRET`  | —                        | Client secret OAuth App.                              |
+| `GITHUB_OAUTH_REDIRECT_URI`   | —                        | Callback URL в GitHub.                                |
+
+
+### Bitbucket (опционально)
+
+
+| Переменная                      | По умолчанию                    | Описание               |
+| ------------------------------- | ------------------------------- | ---------------------- |
+| `BITBUCKET_BASE_URL`            | `https://bitbucket.org`         | Cloud или Data Center. |
+| `BITBUCKET_API_BASE_URL`        | `https://api.bitbucket.org/2.0` | REST API base.         |
+| `BITBUCKET_OAUTH_CLIENT_ID`     | —                               | OAuth consumer key.    |
+| `BITBUCKET_OAUTH_CLIENT_SECRET` | —                               | OAuth consumer secret. |
+| `BITBUCKET_OAUTH_REDIRECT_URI`  | —                               | OAuth callback URL.    |
+| `BITBUCKET_WEBHOOK_SECRET`      | —                               | Secret для webhook.    |
+
+
+### GitFlic (опционально)
+
+
+| Переменная                    | По умолчанию               | Описание                                   |
+| ----------------------------- | -------------------------- | ------------------------------------------ |
+| `GITFLIC_BASE_URL`            | `https://gitflic.ru`       | GitFlic или self-hosted.                   |
+| `GITFLIC_API_BASE_URL`        | `https://api.gitflic.ru`   | REST API (self-hosted: `{base}/rest-api`). |
+| `GITFLIC_OAUTH_BASE_URL`      | `https://oauth.gitflic.ru` | OAuth server.                              |
+| `GITFLIC_OAUTH_CLIENT_ID`     | —                          | OAuth client ID.                           |
+| `GITFLIC_OAUTH_CLIENT_SECRET` | —                          | OAuth client secret.                       |
+| `GITFLIC_OAUTH_REDIRECT_URI`  | —                          | OAuth callback URL.                        |
+| `GITFLIC_WEBHOOK_SECRET`      | —                          | Shared secret webhook.                     |
+
+
+### Email (опционально)
+
+
+| Переменная       | По умолчанию         | Описание                                      |
+| ---------------- | -------------------- | --------------------------------------------- |
+| `EMAIL_PROVIDER` | `auto`               | `console` (только лог), `smtp` или `auto`.    |
+| `SMTP_URL`       | —                    | Полный SMTP URL (перекрывает host/port/user). |
+| `SMTP_HOST`      | —                    | Хост SMTP-сервера.                            |
+| `SMTP_PORT`      | `587`                | Порт SMTP.                                    |
+| `SMTP_USERNAME`  | —                    | Логин SMTP.                                   |
+| `SMTP_PASSWORD`  | —                    | Пароль SMTP.                                  |
+| `SMTP_FROM`      | —                    | Адрес отправителя.                            |
+| `SMTP_STARTTLS`  | `true`               | Использовать STARTTLS.                        |
+| `FROM_EMAIL`     | `no-reply@localhost` | Fallback sender.                              |
+| `CONTACT_EMAIL`  | `admin@localhost`    | Контакт для публичных форм.                   |
+| `SUPPORT_EMAIL`  | `admin@localhost`    | Поддержка (mailto в dashboard).               |
+
+
+### Уведомления — Telegram и Slack (опционально)
+
+
+| Переменная                       | По умолчанию | Описание                                        |
+| -------------------------------- | ------------ | ----------------------------------------------- |
+| `TELEGRAM_PLATFORM_BOT_TOKEN`    | —            | Токен бота для привязки Telegram-каналов.       |
+| `TELEGRAM_PLATFORM_BOT_USERNAME` | —            | `@username` бота для deep links.                |
+| `SLACK_PLATFORM_CLIENT_ID`       | —            | Client ID Slack OAuth app.                      |
+| `SLACK_PLATFORM_CLIENT_SECRET`   | —            | Client secret Slack OAuth app.                  |
+| `TELEGRAM_WEBHOOK_BASE_URL`      | —            | Публичный URL для регистрации Telegram webhook. |
+| `TELEGRAM_WEBHOOK_IP`            | —            | Ограничение IP источника webhook.               |
+
+
+### Polling worker и лимиты
+
+
+| Переменная              | По умолчанию | Описание                                             |
+| ----------------------- | ------------ | ---------------------------------------------------- |
+| `POLL_INTERVAL_SECONDS` | `60`         | Интервал OAuth-polling CI-провайдеров.               |
+| `POLL_BATCH_SIZE`       | `20`         | Макс. подключений за один tick beat.                 |
+| `RATE_LIMIT_PER_MINUTE` | `120`        | Глобальный rate limit API на IP.                     |
+| `COST_SAVER_TTL_HOURS`  | `6`          | Окно дедупликации повторных анализов одного падения. |
+
+
+### Исходящий HTTP proxy (опционально)
+
+
+| Переменная                    | По умолчанию | Описание                                        |
+| ----------------------------- | ------------ | ----------------------------------------------- |
+| `OUTBOUND_HTTP_PROXY_URL`     | —            | HTTP proxy по умолчанию для исходящих запросов. |
+| `TELEGRAM_PROXY_URL`          | —            | Proxy только для Telegram API.                  |
+| `SLACK_PROXY_URL`             | —            | Proxy только для Slack API.                     |
+| `OUTBOUND_HTTP_PROXY_TIMEOUT` | `10.0`       | Таймаут proxy (секунды).                        |
+
+
+### Эксплуатация (опционально)
+
+
+| Переменная          | По умолчанию | Описание                                                      |
+| ------------------- | ------------ | ------------------------------------------------------------- |
+| `LOG_LEVEL`         | `INFO`       | Уровень логов: `DEBUG`, `INFO`, `WARNING`, `ERROR`.           |
+| `ALLOWED_HOSTS`     | —            | Список host через запятую для `TrustedHostMiddleware` в prod. |
+| `FLOWER_BASIC_AUTH` | —            | `user:password` для Flower UI при отдельном деплое.           |
+
+
+---
+
+## Лицензия
+
+[Apache License 2.0](./LICENSE) — Exlogare Community Edition.

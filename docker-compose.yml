@@ -1,0 +1,141 @@
+---
+# Exlogare Community Edition stack.
+#
+# Quick start:
+#   cp .env.example .env
+#   # set ADMIN_EMAIL, ADMIN_PASSWORD, JWT_SECRET, ENCRYPTION_KEY, LLM_*
+#   docker compose up -d --build
+#
+# Production (pull pre-built images from GHCR):
+#   docker compose pull && docker compose up -d
+#
+# External Postgres / Redis:
+#   docker compose -f docker-compose.yml -f docker-compose.external.yml up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-exlogare}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-exlogare}
+      POSTGRES_DB: ${POSTGRES_DB:-exlogare}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-exlogare}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    image: ghcr.io/exlogare/exlogare-api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-exlogare}:${POSTGRES_PASSWORD:-exlogare}@postgres:5432/${POSTGRES_DB:-exlogare}}
+      SYNC_DATABASE_URL: ${SYNC_DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-exlogare}:${POSTGRES_PASSWORD:-exlogare}@postgres:5432/${POSTGRES_DB:-exlogare}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost}
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -H 'Host: localhost' http://127.0.0.1:8000/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+
+  worker:
+    image: ghcr.io/exlogare/exlogare-api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-exlogare}:${POSTGRES_PASSWORD:-exlogare}@postgres:5432/${POSTGRES_DB:-exlogare}}
+      SYNC_DATABASE_URL: ${SYNC_DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-exlogare}:${POSTGRES_PASSWORD:-exlogare}@postgres:5432/${POSTGRES_DB:-exlogare}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
+      api:
+        condition: service_healthy
+    command: >
+      celery -A app.celery_app.celery_app worker
+        --loglevel=info
+        --concurrency=4
+        --max-tasks-per-child=1000
+        --prefetch-multiplier=1
+        -Q default,analysis,notifications
+
+  beat:
+    image: ghcr.io/exlogare/exlogare-api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-exlogare}:${POSTGRES_PASSWORD:-exlogare}@postgres:5432/${POSTGRES_DB:-exlogare}}
+      SYNC_DATABASE_URL: ${SYNC_DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-exlogare}:${POSTGRES_PASSWORD:-exlogare}@postgres:5432/${POSTGRES_DB:-exlogare}}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+    depends_on:
+      redis:
+        condition: service_healthy
+        required: false
+      api:
+        condition: service_healthy
+    command: >
+      celery -A app.celery_app.celery_app beat
+        --loglevel=info
+
+  web:
+    image: ghcr.io/exlogare/exlogare-web:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
