@@ -17,7 +17,7 @@
     <img src="https://github.com/exlogare/exlogare/actions/workflows/images.yml/badge.svg" alt="Docker images">
   </a>
   <img src="https://img.shields.io/badge/python-3.11+-blue" alt="Python 3.11+">
-  <img src="https://img.shields.io/badge/docker-compose-ready-2496ED?logo=docker&logoColor=white" alt="Docker Compose">
+  <img src="https://img.shields.io/badge/docker--compose-ready-2496ED?logo=docker&logoColor=white" alt="Docker Compose">
   <img src="https://img.shields.io/github/v/tag/exlogare/exlogare?label=version" alt="Version">
   <img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License">
   <img src="https://img.shields.io/badge/edition-Community-blue" alt="Community Edition">
