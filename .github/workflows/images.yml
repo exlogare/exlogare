@@ -69,7 +69,8 @@ jobs:
           add_tags() {
             local name="$1"
             shift
-            local -n out=$2
+            local -n out=$1
+            shift
             for tag in "$@"; do
               out+=("${name}:${tag}")
             done
