@@ -11,7 +11,6 @@ import {
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { toast } from "../lib/toast";
 import { useConfirm } from "./ui/ConfirmDialog";
@@ -44,8 +43,6 @@ export default function ApiKeysDialog({ open, onOpenChange }: Props) {
   const { t, i18n } = useTranslation();
   const confirm = useConfirm();
   const caps = useCapabilities();
-  const apiKeysAllowed = caps.data?.api_keys_allowed ?? true;
-  const notificationsEnabled = caps.data?.notifications_enabled ?? false;
   const maxApiKeys = caps.data?.max_api_keys ?? null;
   const currentApiKeys = caps.data?.current_api_keys ?? 0;
   const tokenLimitReached =
@@ -54,7 +51,7 @@ export default function ApiKeysDialog({ open, onOpenChange }: Props) {
   const tokens = useQuery({
     queryKey: ["api-tokens"],
     queryFn: () => api<ApiTokenRow[]>("/api/tokens"),
-    enabled: open && apiKeysAllowed,
+    enabled: open,
   });
 
   const [view, setView] = useState<View>("list");
@@ -212,16 +209,13 @@ export default function ApiKeysDialog({ open, onOpenChange }: Props) {
           </div>
 
           <div className="max-h-[75vh] overflow-y-auto p-5">
-            {!apiKeysAllowed ? (
-              <div />
-            ) : view === "list" ? (
+            {view === "list" ? (
               <ListView
                 tokens={tokens.data ?? []}
                 isLoading={tokens.isLoading}
                 maxApiKeys={maxApiKeys}
                 currentApiKeys={currentApiKeys}
                 tokenLimitReached={tokenLimitReached}
-                notificationsEnabled={notificationsEnabled}
                 language={i18n.language}
                 onCreate={startCreate}
                 onRevoke={revokeToken}
@@ -321,7 +315,6 @@ function ListView({
   maxApiKeys,
   currentApiKeys,
   tokenLimitReached,
-  notificationsEnabled,
   language,
   onCreate,
   onRevoke,
@@ -332,7 +325,6 @@ function ListView({
   maxApiKeys: number | null;
   currentApiKeys: number;
   tokenLimitReached: boolean;
-  notificationsEnabled: boolean;
   language: string;
   onCreate: () => void;
   onRevoke: (id: string, name: string) => void;
@@ -374,17 +366,6 @@ function ListView({
           {t("settings.new_token")}
         </button>
       </div>
-
-      {!notificationsEnabled && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-100">
-          <span className="font-semibold">
-            {t("settings.notif_upsell_title")}
-          </span>
-          <span> </span>
-          <span>{t("settings.notif_upsell_desc")}</span>
-          <span> </span>
-        </div>
-      )}
 
       {isLoading ? (
         <p className="text-sm text-slate-500">{t("common.loading")}</p>

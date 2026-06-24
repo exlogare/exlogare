@@ -13,7 +13,6 @@ import {
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 import clsx from "clsx";
 import { api } from "../lib/api";
 import { useConfirm } from "./ui/ConfirmDialog";
@@ -23,15 +22,10 @@ import type {
   OutboundWebhookSubscription,
 } from "../lib/types";
 
-type Props = {
-  /** When false, render the upsell card and hide all CRUD UI. */
-  enabled: boolean;
-};
-
 const ROOT = "/api/integrations/outbound-webhooks";
 const ALL_EVENTS = ["analysis.completed"] as const;
 
-export default function OutboundWebhooks({ enabled }: Props) {
+export default function OutboundWebhooks() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const confirm = useConfirm();
@@ -190,24 +184,6 @@ export default function OutboundWebhooks({ enabled }: Props) {
     } catch {
       // Clipboard may be unavailable; the secret is still visible onscreen.
     }
-  }
-
-  if (!enabled) {
-    return (
-      <section className="card space-y-3">
-        <div className="flex items-center gap-2">
-          <Webhook className="h-5 w-5 text-brand-600" />
-          <h2 className="text-lg font-semibold">{t("outbound.title")}</h2>
-        </div>
-        <p className="text-sm text-slate-500">{t("outbound.upsell_desc")}</p>
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-100">
-          <span className="font-semibold">{t("outbound.upsell_title")}</span>
-          <span> </span>
-          <span>{t("outbound.upsell_msg")}</span>
-          <span> </span>
-        </div>
-      </section>
-    );
   }
 
   const rows = subs.data ?? [];

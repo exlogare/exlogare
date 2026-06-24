@@ -8,6 +8,8 @@
 
 Open-source Community Edition Exlogare — self-hosted анализ падений CI/CD с AI root-cause отчётами. Развёртывание через Docker Compose.
 
+Community Edition не использует облачный биллинг, квоты и платные тарифы — все функции (API-ключи, мессенджеры, outbound webhooks) включены на вашем инстансе.
+
 ## Быстрый старт
 
 ```bash
@@ -342,19 +344,17 @@ Community Edition поставляется с [`config/llm_system_prompt.txt`](c
 | `SMTP_FROM`      | —                    | Адрес отправителя.                            |
 | `SMTP_STARTTLS`  | `true`               | Использовать STARTTLS.                        |
 | `FROM_EMAIL`     | `no-reply@localhost` | Fallback sender.                              |
-| `CONTACT_EMAIL`  | `admin@localhost`    | Контакт для публичных форм.                   |
-| `SUPPORT_EMAIL`  | `admin@localhost`    | Поддержка (mailto в dashboard).               |
+| `CONTACT_EMAIL`  | `admin@localhost`    | Получатель заявок `/api/public/contact`.        |
+| `SUPPORT_EMAIL`  | `admin@localhost`    | Дополнительный inbox для contact form (опц.).   |
+| `COMPANY_NAME`   | `Exlogare`           | Название бренда в transactional email.          |
 
 
 ### Уведомления — Telegram и Slack (опционально)
 
+Каналы мессенджеров настраиваются в dashboard (**Интеграции → Мессенджеры**): свой Telegram bot token или Slack incoming webhook. Platform-wide env vars не нужны.
 
 | Переменная                       | По умолчанию | Описание                                        |
 | -------------------------------- | ------------ | ----------------------------------------------- |
-| `TELEGRAM_PLATFORM_BOT_TOKEN`    | —            | Токен бота для привязки Telegram-каналов.       |
-| `TELEGRAM_PLATFORM_BOT_USERNAME` | —            | `@username` бота для deep links.                |
-| `SLACK_PLATFORM_CLIENT_ID`       | —            | Client ID Slack OAuth app.                      |
-| `SLACK_PLATFORM_CLIENT_SECRET`   | —            | Client secret Slack OAuth app.                  |
 | `TELEGRAM_WEBHOOK_BASE_URL`      | —            | Публичный URL для регистрации Telegram webhook. |
 | `TELEGRAM_WEBHOOK_IP`            | —            | Ограничение IP источника webhook.               |
 

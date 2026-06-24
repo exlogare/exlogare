@@ -5,9 +5,7 @@ export type Me = {
   onboarded: boolean;
 };
 
-export type PlanCapabilities = {
-  plan: string;
-  effective_plan: "free" | "startup" | "pro" | "enterprise" | "payg";
+export type Capabilities = {
   gitlab_modes: Array<"webhook" | "oauth_polling" | "hybrid">;
   gitlab_oauth_redirect_uri: string;
   max_gitlab_repos: number | null;
@@ -31,20 +29,7 @@ export type PlanCapabilities = {
   notifications_enabled: boolean;
   outbound_webhooks_enabled: boolean;
   history_retention_days: number;
-  support_level: string;
-  quota: {
-    can_run_analysis: boolean;
-    block_reason: string | null;
-    prepaid_analyses_remaining: number;
-    lifetime_analyses_used: number;
-    monthly_analyses_used: number;
-    lifetime_cap?: number;
-    monthly_cap?: number;
-    unlimited?: boolean;
-  };
 };
-
-export type PackItem = { size: number; price_rub: number; currency: string };
 
 export type SessionResponse = {
   access_token: string;
@@ -206,119 +191,6 @@ export type TopProject = {
 };
 export type TopRootCause = { root_cause: string; severity: string; count: number };
 
-export type RecurringAlert = {
-  kind: "retry" | "terminal";
-  error_code: string | null;
-  active_until: string | null;
-  subscription_id: string;
-};
-
-export type AutoRenewInfo = {
-  subscription_id: string;
-  plan: string;
-  auto_renew: boolean;
-  active_until: string | null;
-  recurring_state: "pending" | "activated" | "cancelled" | string;
-};
-
-/** Open YooKassa renewal invoice (set by the celery sweep task 5 days */
-export type YkPendingInvoice = {
-  invoice_id: string;
-  invoice_url: string;
-  expires_at: string | null;
-};
-
-export type PaymentProvider = "intellectmoney" | "yookassa";
-
-export type BillingSummary = {
-  plan: string;
-  plan_limit: number | null;
-  price_per_run_rub: number;
-  runs_this_month: number;
-  free_tier_remaining: number;
-  month_cost_rub: number;
-  balance_rub: number;
-  last_payment: Record<string, unknown> | null;
-  prepaid_analyses_remaining: number;
-  lifetime_analyses_used: number;
-  lifetime_cap: number | null;
-  monthly_cap: number | null;
-  quota_exhausted: boolean;
-  quota_block_reason: string | null;
-  recurring_alert: RecurringAlert | null;
-  auto_renew: AutoRenewInfo | null;
-  billing_enabled?: boolean;
-  payment_provider?: PaymentProvider;
-  yk_pending_invoice?: YkPendingInvoice | null;
-};
-
-export type PaymentIntentWidgetParams = {
-  EshopId: string;
-  OrderId: string;
-  ServiceName: string;
-  RecipientCurrency: string;
-  RecipientAmount: string;
-  Email: string;
-  SuccessUrl: string;
-  FailUrl: string;
-  UserField_1: string;
-  UserField_2: string;
-  Preference: string | null;
-  RecurringType: string | null;
-};
-
-/** Discriminated union over ``mode`` so the SPA can branch cheaply: */
-export type PaymentIntentResponse = {
-  order_id: string;
-  amount_rub: number;
-  currency: string;
-  service_name: string;
-  kind: "pack" | "plan_upgrade" | "plan_renew" | string;
-  provider: PaymentProvider;
-  mode: "widget" | "redirect";
-  widget: PaymentIntentWidgetParams | null;
-  redirect_url: string | null;
-};
-
-export type PaymentStatusResponse = {
-  order_id: string;
-  status: "pending" | "succeeded" | "failed" | "cancelled" | string;
-  kind: "pack" | "plan_upgrade" | "plan_renew" | string | null;
-  amount_rub: number;
-  created_at: string;
-  paid_at: string | null;
-};
-
-export type PaymentIntentRequest =
-  | { kind: "pack"; pack_size: number; email?: string | null }
-  | {
-      kind: "plan";
-      plan: "startup" | "pro";
-      auto_renew?: boolean;
-      email?: string | null;
-    };
-
-export type ChangePlanResponse = {
-  plan: string;
-  effective_at: string | null;
-  pending: boolean;
-  note: string | null;
-  requires_payment: boolean;
-  target_plan: string | null;
-};
-
-export type Payment = {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  description: string | null;
-  paid_at: string | null;
-  created_at: string;
-};
-
-export type Invoice = { period: string; runs: number; cost_rub: number };
-
 export type Analysis = {
   id: string;
   provider: string;
@@ -345,45 +217,6 @@ export type AnalysesResponse = {
   limit: number;
   offset: number;
 };
-
-export type UsageSummary = {
-  tenant_id: string;
-  window_days: number;
-  runs_in_window: number;
-  runs_this_month: number;
-  lifetime_used: number;
-  lifetime_cap: number | null;
-  monthly_cap: number | null;
-  remaining: number;
-  prepaid_remaining: number;
-  plan: string;
-  unlimited: boolean;
-};
-
-export type UsageTimeseriesPoint = { date: string; runs: number };
-
-export type SupportTicketPriority = "low" | "normal" | "high";
-
-export type SupportTicketCreateRequest =
-  | {
-      kind: "support";
-      priority: SupportTicketPriority;
-      subject: string;
-      category: "billing" | "bug" | "integration" | "other";
-      message: string;
-      analysis_id?: string | null;
-    }
-  | {
-      kind: "sales";
-      priority: SupportTicketPriority;
-      company: string;
-      team_size: "1-10" | "11-50" | "51-200" | "200+";
-      expected_volume?: number | null;
-      phone?: string | null;
-      message: string;
-    };
-
-export type SupportTicketCreateResponse = { id: string; status: string };
 
 export type ClusterStatus = "active" | "acknowledged" | "resolved";
 

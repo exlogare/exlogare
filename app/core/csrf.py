@@ -16,7 +16,6 @@ EXEMPT_PREFIXES: tuple[str, ...] = (
     "/webhooks/",
     "/auth/gitlab/callback",
     "/api/auth/request",
-    "/api/auth/magic-link",
     "/api/auth/verify",
     "/api/ingest/",
     "/api/integrations/telegram/webhook",

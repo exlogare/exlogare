@@ -12,12 +12,10 @@ from app.models.api_token import ApiToken
 from app.models.ci_connection import CIConnection, CIProvider
 from app.services.selfhost_policy import get_capabilities as base_caps
 
-router = APIRouter(prefix="/api/plan", tags=["plan"])
+router = APIRouter(prefix="/api/capabilities", tags=["capabilities"])
 
 
-class PlanCapabilitiesOut(BaseModel):
-    plan: str
-    effective_plan: str
+class CapabilitiesOut(BaseModel):
     gitlab_modes: list[str]
     gitlab_oauth_redirect_uri: str
     max_gitlab_repos: int | None
@@ -41,8 +39,6 @@ class PlanCapabilitiesOut(BaseModel):
     notifications_enabled: bool
     outbound_webhooks_enabled: bool
     history_retention_days: int
-    support_level: str
-    quota: dict
 
 
 async def _count_repos(session: AsyncSession, tenant_id, provider: CIProvider) -> int:
@@ -55,11 +51,11 @@ async def _count_repos(session: AsyncSession, tenant_id, provider: CIProvider) -
     return int((await session.execute(stmt)).scalar() or 0)
 
 
-@router.get("/capabilities", response_model=PlanCapabilitiesOut)
-async def get_plan_capabilities(
+@router.get("", response_model=CapabilitiesOut)
+async def get_capabilities(
     principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_db),
-) -> PlanCapabilitiesOut:
+) -> CapabilitiesOut:
     settings = get_settings()
     caps = base_caps()
     tenant_id = principal.tenant.id
@@ -74,9 +70,7 @@ async def get_plan_capabilities(
         ).scalar()
         or 0
     )
-    return PlanCapabilitiesOut(
-        plan="community",
-        effective_plan="community",
+    return CapabilitiesOut(
         gitlab_modes=caps["gitlab_modes_allowed"],
         gitlab_oauth_redirect_uri=settings.gitlab_oauth_redirect_uri,
         max_gitlab_repos=None,
@@ -100,13 +94,4 @@ async def get_plan_capabilities(
         notifications_enabled=True,
         outbound_webhooks_enabled=True,
         history_retention_days=settings.retention_days,
-        support_level="community",
-        quota={
-            "can_run_analysis": True,
-            "block_reason": None,
-            "prepaid_analyses_remaining": 0,
-            "lifetime_analyses_used": 0,
-            "monthly_analyses_used": 0,
-            "unlimited": True,
-        },
     )

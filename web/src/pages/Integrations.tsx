@@ -81,9 +81,6 @@ export default function IntegrationsPage() {
   const caps = useCapabilities();
   const { me } = useAuth();
   const isAdmin = me?.role === "owner" || me?.role === "admin";
-  const notifAllowed = caps.data?.notifications_enabled ?? true;
-  const apiKeysAllowed = caps.data?.api_keys_allowed ?? true;
-  const outboundEnabled = caps.data?.outbound_webhooks_enabled ?? false;
   const maxApiKeys = caps.data?.max_api_keys ?? null;
   const currentApiKeys = caps.data?.current_api_keys ?? 0;
 
@@ -850,30 +847,25 @@ export default function IntegrationsPage() {
             <button
               className="btn-secondary"
               onClick={() => setAddDialog("telegram")}
-              disabled={!notifAllowed}
             >
               <Plus className="h-4 w-4" /> {t("integrations.add_telegram")}
             </button>
             <button
               className="btn-secondary"
               onClick={() => setAddDialog("slack")}
-              disabled={!notifAllowed}
             >
               <Plus className="h-4 w-4" /> {t("integrations.add_slack")}
             </button>
             <button
               className="btn-secondary"
               onClick={() => setAddDialog("matrix")}
-              disabled={!notifAllowed}
             >
               <Plus className="h-4 w-4" /> {t("integrations.add_matrix")}
             </button>
           </div>
         </div>
 
-        {!notifAllowed ? (
-          <div />
-        ) : notify.isLoading ? (
+        {notify.isLoading ? (
           <p className="text-sm text-slate-500">{t("common.loading")}</p>
         ) : channels.length === 0 ? (
           <p className="text-sm text-slate-500">{t("integrations.messengers_empty")}</p>
@@ -920,18 +912,16 @@ export default function IntegrationsPage() {
               <p className="mt-1 text-sm text-slate-500">
                 {t("integrations.api_keys_subtitle")}
               </p>
-              {apiKeysAllowed && (
-                <p className="mt-1 text-xs text-slate-500">
-                  {maxApiKeys !== null
-                    ? t("settings.api_tokens_count", {
-                        current: currentApiKeys,
-                        max: maxApiKeys,
-                      })
-                    : t("integrations.api_keys_count_unlimited", {
-                        current: currentApiKeys,
-                      })}
-                </p>
-              )}
+              <p className="mt-1 text-xs text-slate-500">
+                {maxApiKeys !== null
+                  ? t("settings.api_tokens_count", {
+                      current: currentApiKeys,
+                      max: maxApiKeys,
+                    })
+                  : t("integrations.api_keys_count_unlimited", {
+                      current: currentApiKeys,
+                    })}
+              </p>
             </div>
             <button
               className="btn-primary inline-flex items-center gap-1"
@@ -941,15 +931,10 @@ export default function IntegrationsPage() {
               {t("integrations.api_keys_manage")}
             </button>
           </div>
-          {!apiKeysAllowed && (
-            <div className="mt-4">
-              <div />
-            </div>
-          )}
         </section>
       )}
 
-      {isAdmin && <OutboundWebhooks enabled={outboundEnabled} />}
+      {isAdmin && <OutboundWebhooks />}
 
       {isAdmin && (
         <ApiKeysDialog open={apiKeysOpen} onOpenChange={setApiKeysOpen} />

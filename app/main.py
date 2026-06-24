@@ -29,7 +29,7 @@ from app.api.routes import (
     integrations_github_router,
     integrations_messengers_router,
     integrations_outbound_webhooks_router,
-    plan_router,
+    capabilities_router,
     public_api_router,
     public_router,
     stats_router,
@@ -169,7 +169,7 @@ def create_app() -> FastAPI:
     app.include_router(integrations_gitflic_router)
     app.include_router(integrations_messengers_router)
     app.include_router(integrations_outbound_webhooks_router)
-    app.include_router(plan_router)
+    app.include_router(capabilities_router)
     app.include_router(public_router)
     app.include_router(public_api_router)
     app.include_router(stats_router)

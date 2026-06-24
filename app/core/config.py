@@ -20,9 +20,8 @@ def get_app_version() -> str:
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
 
-    selfhost_mode: bool = True
-    app_env: Literal["dev", "test", "staging", "prod"] = "dev"
     app_name: str = "exlogare-community-edition"
+    app_env: Literal["dev", "test", "staging", "prod"] = "dev"
     log_level: str = "INFO"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
@@ -97,6 +96,7 @@ class Settings(BaseSettings):
 
     contact_email: str = "admin@localhost"
     support_email: str = "admin@localhost"
+    company_name: str = "Exlogare"
 
     smtp_url: str = ""
     smtp_host: str = ""
@@ -108,12 +108,6 @@ class Settings(BaseSettings):
     from_email: str = "no-reply@localhost"
     email_provider: Literal["console", "smtp", "auto"] = "auto"
     email_brand_base_url: str = ""
-
-    telegram_platform_bot_token: str = ""
-    telegram_platform_bot_username: str = ""
-
-    slack_platform_client_id: str = ""
-    slack_platform_client_secret: str = ""
 
     outbound_http_proxy_url: str = ""
     telegram_proxy_url: str = ""

@@ -3,7 +3,7 @@ from app.api.routes.analyze import router as analyze_router
 from app.api.routes.audit import router as audit_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.auth_gitlab import router as auth_gitlab_router
-from app.api.routes.capabilities import router as plan_router
+from app.api.routes.capabilities import router as capabilities_router
 from app.api.routes.clusters import (
     public_router as clusters_public_router,
     router as clusters_router,
@@ -46,7 +46,7 @@ __all__ = [
     "integrations_github_router",
     "integrations_messengers_router",
     "integrations_outbound_webhooks_router",
-    "plan_router",
+    "capabilities_router",
     "public_router",
     "public_api_router",
     "stats_router",

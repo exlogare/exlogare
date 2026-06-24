@@ -27,6 +27,8 @@
 
 Open-source Community Edition of Exlogare — self-hosted CI/CD failure analysis with AI root-cause reports. Deploy with Docker Compose.
 
+Community Edition has no cloud billing, usage quotas, or paid tiers — all features (API keys, messengers, outbound webhooks) are enabled on your instance.
+
 ## Quick start
 
 ```bash
@@ -333,17 +335,16 @@ The prompt tells the model to return **concrete** `fix_suggestion` text (file pa
 | `SMTP_FROM` | — | From address for outbound mail. |
 | `SMTP_STARTTLS` | `true` | Use STARTTLS. |
 | `FROM_EMAIL` | `no-reply@localhost` | Fallback sender address. |
-| `CONTACT_EMAIL` | `admin@localhost` | Contact address shown in public forms. |
-| `SUPPORT_EMAIL` | `admin@localhost` | Support contact (dashboard mailto link). |
+| `CONTACT_EMAIL` | `admin@localhost` | Recipient for `/api/public/contact` submissions. |
+| `SUPPORT_EMAIL` | `admin@localhost` | Optional secondary inbox for contact form routing. |
+| `COMPANY_NAME` | `Exlogare` | Brand name in transactional emails. |
 
 ### Notifications — Telegram & Slack (optional)
 
+Per-tenant messenger channels are configured in the dashboard (**Integrations → Messengers**). You provide your own Telegram bot token or Slack incoming webhook URL — no platform-wide bot env vars are required.
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TELEGRAM_PLATFORM_BOT_TOKEN` | — | Bot token for linking Telegram channels. |
-| `TELEGRAM_PLATFORM_BOT_USERNAME` | — | Bot `@username` for deep links. |
-| `SLACK_PLATFORM_CLIENT_ID` | — | Slack OAuth app client ID. |
-| `SLACK_PLATFORM_CLIENT_SECRET` | — | Slack OAuth app secret. |
 | `TELEGRAM_WEBHOOK_BASE_URL` | — | Public URL for Telegram webhook registration. |
 | `TELEGRAM_WEBHOOK_IP` | — | Restrict webhook source IP if needed. |
 

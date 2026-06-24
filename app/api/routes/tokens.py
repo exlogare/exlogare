@@ -113,8 +113,8 @@ async def create_token(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
-                    f"Your plan allows up to {cap} active API tokens. "
-                    "Revoke an existing one or upgrade your plan."
+                    f"Your workspace allows up to {cap} active API tokens. "
+                    "Revoke an existing one to create a new token."
                 ),
             )
 

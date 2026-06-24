@@ -98,7 +98,6 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const caps = useCapabilities();
-  const apiKeysAllowed = caps.data?.api_keys_allowed ?? true;
   const maxApiKeys = caps.data?.max_api_keys ?? null;
   const currentApiKeys = caps.data?.current_api_keys ?? 0;
   const tokenLimitReached =
@@ -532,9 +531,7 @@ export default function OnboardingPage() {
                 </button>
                 <button
                   type="button"
-                  disabled={!apiKeysAllowed}
                   onClick={() => {
-                    if (!apiKeysAllowed) return;
                     setTrack("api");
                     setStepKey("ci_pick");
                   }}
@@ -543,7 +540,6 @@ export default function OnboardingPage() {
                     track === "api"
                       ? "border-brand-600 bg-brand-50 dark:bg-brand-900/30"
                       : "border-slate-200 bg-white hover:border-brand-300 dark:border-slate-800 dark:bg-slate-900",
-                    !apiKeysAllowed && "cursor-not-allowed opacity-60",
                   )}
                 >
                   <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-700 text-white">
@@ -568,11 +564,6 @@ export default function OnboardingPage() {
                         {t("onboarding.track_api_b3")}
                       </li>
                     </ul>
-                    {!apiKeysAllowed && (
-                      <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                        {t("onboarding.track_api_disabled")}
-                      </div>
-                    )}
                   </div>
                 </button>
               </div>
