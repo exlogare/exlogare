@@ -49,6 +49,10 @@
   "auth": {
     "signIn": "Sign in",
     "tagline": "AI RCA for CI failures",
+    "password_intro": "Sign in with your admin account.",
+    "email": "Email",
+    "password": "Password",
+    "signing_in": "Signing in…",
     "magic_intro": "Enter your email - we'll send you a magic sign-in link.",
     "work_email": "Work email",
     "send_magic_link": "Send magic link",

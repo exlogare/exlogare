@@ -49,6 +49,10 @@
   "auth": {
     "signIn": "Вход",
     "tagline": "AI-анализ причин сбоев CI",
+    "password_intro": "Войдите с учётной записью администратора.",
+    "email": "Email",
+    "password": "Пароль",
+    "signing_in": "Вход…",
     "magic_intro": "Введите email — отправим волшебную ссылку для входа.",
     "work_email": "Рабочий email",
     "send_magic_link": "Отправить ссылку",

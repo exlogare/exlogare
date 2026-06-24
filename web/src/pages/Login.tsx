@@ -57,7 +57,7 @@ export default function LoginPage() {
 
         <div className="card">
           <h2 className="mb-2 text-lg font-semibold">{t("auth.signIn")}</h2>
-          <p className="mb-6 text-sm text-slate-500">{t("auth.password_intro", "Sign in with your admin account.")}</p>
+          <p className="mb-6 text-sm text-slate-500">{t("auth.password_intro")}</p>
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium">{t("auth.email")}</label>
@@ -71,7 +71,7 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">{t("auth.password", "Password")}</label>
+              <label className="mb-1 block text-sm font-medium">{t("auth.password")}</label>
               <input
                 type="password"
                 className="input w-full"
@@ -83,7 +83,7 @@ export default function LoginPage() {
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button type="submit" className="btn-primary w-full" disabled={loading}>
-              {loading ? t("auth.signing_in", "Signing in…") : t("auth.signIn")}
+              {loading ? t("auth.signing_in") : t("auth.signIn")}
             </button>
           </form>
         </div>

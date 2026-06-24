@@ -45,6 +45,22 @@ from app.services.oauth.gitlab import GitLabOAuthRefreshFailed
 _HEALTH_BYPASS_PATHS: frozenset[str] = frozenset({"/health", "/healthz"})
 
 
+def _expand_localhost_aliases(host: str) -> set[str]:
+    """localhost and 127.0.0.1 are interchangeable for local self-host installs."""
+    if not host:
+        return set()
+    out = {host}
+    if host == "localhost":
+        out.add("127.0.0.1")
+    elif host == "127.0.0.1":
+        out.add("localhost")
+    return out
+
+
+def _host_from_url(url: str) -> str:
+    return url.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0]
+
+
 def _install_trusted_host_with_health_bypass(app: FastAPI, allowed: list[str]) -> None:
     import re
 
@@ -116,16 +132,15 @@ def create_app() -> FastAPI:
     )
 
     if settings.app_env == "prod":
-        trusted: list[str] = list(settings.allowed_hosts)
+        trusted: set[str] = set()
+        for entry in settings.allowed_hosts:
+            trusted.update(_expand_localhost_aliases(entry.split(":", 1)[0]))
         if not trusted:
             for url in (settings.web_base_url, settings.public_base_url):
-                host = url.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0]
-                if host:
-                    trusted.append(host)
+                trusted.update(_expand_localhost_aliases(_host_from_url(url)))
         if trusted:
-            trusted_set = set(trusted)
-            trusted_set.add("api")
-            _install_trusted_host_with_health_bypass(app, sorted(trusted_set))
+            trusted.add("api")
+            _install_trusted_host_with_health_bypass(app, sorted(trusted))
 
     @app.middleware("http")
     async def correlation_middleware(request: Request, call_next) -> Response:
