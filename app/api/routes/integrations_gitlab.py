@@ -113,6 +113,7 @@ class WebhookInitResponse(BaseModel):
     webhook_secret: str
     hook_registered: bool
     instructions: list[str]
+    webhook_register_error: str | None = None
 
 
 class ConnectionOut(BaseModel):
@@ -516,6 +517,7 @@ async def webhook_init(
     hook_registered = False
     project_id: str | None = None
     project_path: str | None = None
+    webhook_register_error: str | None = None
     instructions: list[str] = _manual_webhook_instructions(webhook_url, secret)
 
     async with GitLabClient(conn) as client:
@@ -537,7 +539,8 @@ async def webhook_init(
                 hook_registered = True
                 conn.status = ConnectionStatus.ACTIVE
             except Exception as exc:
-                log.warning("gitlab.webhook_register_failed", error=str(exc))
+                webhook_register_error = str(exc)
+                log.warning("gitlab.webhook_register_failed", error=webhook_register_error)
 
     await record_audit(
         session,
@@ -560,6 +563,7 @@ async def webhook_init(
         webhook_secret=secret,
         hook_registered=hook_registered,
         instructions=instructions,
+        webhook_register_error=webhook_register_error,
     )
 
 

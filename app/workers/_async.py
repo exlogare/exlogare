@@ -39,4 +39,9 @@ async def worker_session_scope():
 
 def run_async(coro_factory: Callable[[], Awaitable[T]]) -> T:
     """Run ``coro_factory()`` in a fresh event loop."""
-    return asyncio.run(coro_factory())
+    try:
+        return asyncio.run(coro_factory())
+    finally:
+        from app.core.redis import get_redis
+
+        get_redis.cache_clear()

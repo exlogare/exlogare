@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Bell,
   Check,
   Circle,
   ExternalLink,
@@ -32,7 +31,6 @@ import {
 type Flavor = "gitlab_com" | "self_hosted";
 type Mode = "oauth" | "webhook";
 type CiTarget = "gitlab" | "github" | "bitbucket" | "gitflic";
-/** Top-level wizard split. ``"git"`` = OAuth/webhook on a Git host (the */
 type Track = "git" | "api";
 
 type StepKey =
@@ -100,7 +98,6 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const caps = useCapabilities();
-  const notificationsAllowed = caps.data?.notifications_enabled ?? true;
   const apiKeysAllowed = caps.data?.api_keys_allowed ?? true;
   const maxApiKeys = caps.data?.max_api_keys ?? null;
   const currentApiKeys = caps.data?.current_api_keys ?? 0;
@@ -140,7 +137,7 @@ export default function OnboardingPage() {
     url: string;
     secret: string;
     hookRegistered: boolean;
-    instructions: string[];
+    registerError?: string | null;
   } | null>(null);
 
   const [projects, setProjects] = useState<GitLabProject[]>([]);
@@ -298,7 +295,7 @@ export default function OnboardingPage() {
           url: res.webhook_url,
           secret: res.webhook_secret,
           hookRegistered: res.hook_registered,
-          instructions: res.instructions,
+          registerError: res.webhook_register_error ?? null,
         });
         setBbDcLegacyWarning(Boolean(res.legacy_dc_warning));
         goTo("messenger");
@@ -322,7 +319,7 @@ export default function OnboardingPage() {
           url: res.webhook_url,
           secret: res.webhook_secret,
           hookRegistered: res.hook_registered,
-          instructions: res.instructions,
+          registerError: res.webhook_register_error ?? null,
         });
         goTo("messenger");
       }
@@ -470,6 +467,10 @@ export default function OnboardingPage() {
             {t("onboarding.skip")}
           </button>
         </div>
+
+        {stepKey === "messenger" && webhookInfo && !webhookInfo.hookRegistered && (
+          <WebhookSetupPanel webhookInfo={webhookInfo} ciTarget={ciTarget} />
+        )}
 
         <div className="card">
           <StepIndicator />
@@ -1442,87 +1443,14 @@ export default function OnboardingPage() {
                 : mode === "oauth"
                   ? "projects"
                   : "connect";
-            return notificationsAllowed ? (
+            return (
               <MessengerStep
-                webhookInfo={webhookInfo}
                 bitbucketDcLegacyWarning={
                   ciTarget === "bitbucket" && bbDcLegacyWarning
                 }
                 onBack={() => goTo(messengerBack)}
                 onNext={() => goTo("demo")}
               />
-            ) : (
-              <div className="space-y-5">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-5 w-5 text-brand-600" />
-                  <h2 className="text-lg font-semibold">
-                    {t("onboarding.messenger_gated_title")}
-                  </h2>
-                </div>
-                <p className="text-sm text-slate-500">
-                  {t("onboarding.messenger_gated_subtitle")}
-                </p>
-
-                <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
-                  <div className="font-semibold text-slate-800 dark:text-slate-100">
-                    {t("onboarding.messenger_where_to_see_title")}
-                  </div>
-                  <ul className="mt-2 space-y-2 text-slate-600 dark:text-slate-300">
-                    <li className="flex items-start gap-2">
-                      <Circle className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 fill-current text-brand-600" />
-                      <span>{t("onboarding.messenger_where_dashboard")}</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Circle className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 fill-current text-brand-600" />
-                      <span>{t("onboarding.messenger_where_analyses")}</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Circle className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 fill-current text-brand-600" />
-                      <span>{t("onboarding.messenger_where_email")}</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900/50 dark:bg-amber-900/20">
-                  <div className="font-semibold text-amber-900 dark:text-amber-100">
-                    {t("onboarding.messenger_upgrade_title")}
-                  </div>
-                  <p className="mt-1 text-amber-900/80 dark:text-amber-100/80">
-                    {t("onboarding.messenger_upgrade_desc")}
-                  </p>
-                  <ul className="mt-2 space-y-1 text-xs text-amber-900/80 dark:text-amber-100/80">
-                    <li>· {t("onboarding.messenger_upgrade_b1")}</li>
-                    <li>· {t("onboarding.messenger_upgrade_b2")}</li>
-                    <li>· {t("onboarding.messenger_upgrade_b3")}</li>
-                  </ul>
-                  <button
-                    type="button"
-                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-900 hover:underline dark:text-amber-100"
-                    onClick={() => navigate("/dashboard/settings")}
-                  >
-                    {t("onboarding.messenger_upgrade_cta")}
-                    <ExternalLink className="h-3 w-3" />
-                  </button>
-                </div>
-
-                {track === "api" && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {t("onboarding.api_messenger_upsell_hint")}
-                  </p>
-                )}
-
-                <div className="flex items-center justify-between pt-4">
-                  <button
-                    className="btn-secondary"
-                    onClick={() => goTo(messengerBack)}
-                  >
-                    {t("common.back")}
-                  </button>
-                  <button className="btn-primary" onClick={() => goTo("demo")}>
-                    {t("common.continue")}
-                  </button>
-                </div>
-              </div>
             );
           })()}
 
@@ -1640,18 +1568,84 @@ function ModeCard({
   );
 }
 
-function MessengerStep({
+function WebhookSetupPanel({
   webhookInfo,
-  bitbucketDcLegacyWarning,
-  onBack,
-  onNext,
+  ciTarget,
 }: {
   webhookInfo: {
     url: string;
     secret: string;
     hookRegistered: boolean;
-    instructions: string[];
-  } | null;
+    registerError?: string | null;
+  };
+  ciTarget: CiTarget;
+}) {
+  const { t } = useTranslation();
+  const host = (() => {
+    try {
+      return new URL(webhookInfo.url).hostname;
+    } catch {
+      return "";
+    }
+  })();
+  const isLocalHost =
+    host === "localhost" || host === "127.0.0.1" || host.endsWith(".local");
+
+  const steps =
+    ciTarget === "bitbucket"
+      ? [
+          t("onboarding.webhook_setup_bitbucket_step1"),
+          t("onboarding.webhook_setup_step_url", { url: webhookInfo.url }),
+          t("onboarding.webhook_setup_step_secret", { secret: webhookInfo.secret }),
+          t("onboarding.webhook_setup_bitbucket_step4"),
+          t("onboarding.webhook_setup_bitbucket_step5"),
+        ]
+      : [
+          t("onboarding.webhook_setup_gitlab_step1"),
+          t("onboarding.webhook_setup_step_url", { url: webhookInfo.url }),
+          t("onboarding.webhook_setup_step_secret", { secret: webhookInfo.secret }),
+          t("onboarding.webhook_setup_gitlab_step4"),
+          t("onboarding.webhook_setup_gitlab_step5"),
+          t("onboarding.webhook_setup_gitlab_step6"),
+        ];
+
+  return (
+    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900 dark:bg-amber-900/30">
+      <div className="mb-2 font-semibold">
+        {ciTarget === "bitbucket"
+          ? t("onboarding.finish_webhook_setup_bitbucket")
+          : t("onboarding.finish_webhook_setup")}
+      </div>
+      {webhookInfo.registerError && (
+        <p className="mb-2 text-xs text-amber-900/90 dark:text-amber-100/90">
+          {t("onboarding.webhook_auto_register_failed", {
+            error: webhookInfo.registerError,
+          })}
+        </p>
+      )}
+      {isLocalHost && (
+        <p className="mb-2 text-xs text-amber-900/90 dark:text-amber-100/90">
+          {t("onboarding.webhook_localhost_hint")}
+        </p>
+      )}
+      <ol className="list-decimal space-y-1 pl-5 text-slate-700 dark:text-slate-200">
+        {steps.map((step, i) => (
+          <li key={i}>{step}</li>
+        ))}
+      </ol>
+      <div className="mt-3 grid grid-cols-1 gap-2 text-xs md:grid-cols-2">
+        <Copyable label={t("onboarding.webhook_url")} value={webhookInfo.url} />
+        <Copyable label={t("onboarding.secret_token")} value={webhookInfo.secret} />
+      </div>
+    </div>
+  );
+}
+
+function MessengerStep({
+  bitbucketDcLegacyWarning,
+  onBack,
+  onNext,
+}: {
   bitbucketDcLegacyWarning?: boolean;
   onBack: () => void;
   onNext: () => void;
@@ -1737,21 +1731,6 @@ function MessengerStep({
 
   return (
     <div className="space-y-4">
-      {webhookInfo && !webhookInfo.hookRegistered && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900 dark:bg-amber-900/30">
-          <div className="mb-2 font-semibold">{t("onboarding.finish_webhook_setup")}</div>
-          <ol className="list-decimal space-y-1 pl-5 text-slate-700 dark:text-slate-200">
-            {webhookInfo.instructions.map((step, i) => (
-              <li key={i}>{step}</li>
-            ))}
-          </ol>
-          <div className="mt-3 grid grid-cols-1 gap-2 text-xs md:grid-cols-2">
-            <Copyable label={t("onboarding.webhook_url")} value={webhookInfo.url} />
-            <Copyable label={t("onboarding.secret_token")} value={webhookInfo.secret} />
-          </div>
-        </div>
-      )}
-
       {bitbucketDcLegacyWarning && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs dark:border-amber-900/50 dark:bg-amber-900/20">
           {t("onboarding.dc_legacy_warning_bitbucket")}

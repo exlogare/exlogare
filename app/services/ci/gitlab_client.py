@@ -198,18 +198,32 @@ class GitLabClient(CIProviderClient, FeedbackPublisher):
         url: str,
         token: str,
     ) -> dict:
+        for hook in await self.list_webhooks(project_id):
+            if hook.get("url") == url:
+                return hook
+
+        payload = {
+            "url": url,
+            "token": token,
+            "pipeline_events": True,
+            "job_events": True,
+            "push_events": False,
+            "merge_requests_events": False,
+            "enable_ssl_verification": url.lower().startswith("https://"),
+        }
         resp = await self._post(
             f"/api/v4/projects/{project_id}/hooks",
-            json={
-                "url": url,
-                "token": token,
-                "pipeline_events": True,
-                "job_events": True,
-                "push_events": False,
-                "merge_requests_events": False,
-                "enable_ssl_verification": True,
-            },
+            json=payload,
         )
+        if resp.status_code >= 400:
+            detail = resp.text[:500]
+            log.warning(
+                "gitlab.webhook_register_http_error",
+                status=resp.status_code,
+                detail=detail,
+                url=url,
+            )
+            resp.raise_for_status()
         return resp.json()
 
     async def list_webhooks(self, project_id: str) -> list[dict]:

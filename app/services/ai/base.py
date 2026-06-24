@@ -45,6 +45,36 @@ def _extract_json(content: str) -> dict:
     return {}
 
 
+def _normalize_analysis_data(data: dict) -> dict:
+    out = {k: v for k, v in data.items() if v is not None}
+    aliases = {
+        "fix": "fix_suggestion",
+        "fixSuggestion": "fix_suggestion",
+        "suggestion": "fix_suggestion",
+        "details": "explanation",
+        "summary": "explanation",
+        "analysis": "explanation",
+        "rootCause": "root_cause",
+    }
+    for src, dst in aliases.items():
+        if dst not in out and src in out:
+            out[dst] = out[src]
+    if isinstance(out.get("severity"), str):
+        out["severity"] = out["severity"].strip().lower()
+    if "confidence" not in out:
+        out["confidence"] = 0.75
+    elif isinstance(out["confidence"], str):
+        try:
+            out["confidence"] = float(out["confidence"])
+        except ValueError:
+            out["confidence"] = 0.75
+    if "explanation" not in out and out.get("root_cause"):
+        out["explanation"] = str(out["root_cause"])
+    if "fix_suggestion" not in out and out.get("root_cause"):
+        out["fix_suggestion"] = "Review the failing CI step and apply the suggested fix from the log."
+    return out
+
+
 def _parse_analysis(content: str) -> AnalysisOutput:
     data = _extract_json(content)
     if not data:
@@ -58,16 +88,20 @@ def _parse_analysis(content: str) -> AnalysisOutput:
             needs_more_context=True,
             missing_context_hint="llm_parse_error",
         )
+    data = _normalize_analysis_data(data)
     try:
         return AnalysisOutput(**data)
     except ValidationError as exc:
-        log.warning("llm.invalid_schema", error=str(exc))
+        log.warning("llm.invalid_schema", error=str(exc), keys=sorted(data.keys()))
+        root = str(data.get("root_cause") or "Analyzer output failed schema validation")
         return AnalysisOutput(
-            root_cause="Analyzer output failed schema validation",
-            explanation=f"Schema errors: {exc}",
-            fix_suggestion="Retry analysis; tighten the system prompt schema.",
-            severity="low",
-            confidence=0.2,
+            root_cause=root[:2000],
+            explanation=str(data.get("explanation") or root)[:8000],
+            fix_suggestion=str(
+                data.get("fix_suggestion") or "Review the CI log and retry the analysis."
+            )[:4000],
+            severity=data.get("severity") if data.get("severity") in {"low", "medium", "high"} else "medium",
+            confidence=min(1.0, max(0.0, float(data.get("confidence", 0.5)))),
             needs_more_context=True,
             missing_context_hint="llm_schema_error",
         )
