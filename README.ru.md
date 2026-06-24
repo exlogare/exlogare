@@ -105,18 +105,55 @@ docker compose -f docker-compose.yml -f docker-compose.external.yml up -d
 
 ## HTTPS и PUBLIC_BASE_URL
 
-`PUBLIC_BASE_URL` **обязателен**, если вы подключаете реальные CI-интеграции (GitLab, GitHub, Bitbucket, Jenkins OAuth, боты мессенджеров и т.д.). Укажите в `.env` точный URL, по которому **внешние системы** достучатся до API Exlogare — схема, хост и порт, если это не 443/80.
+`PUBLIC_BASE_URL` — адрес, по которому **внешние системы** достучатся до API Exlogare (вебхуки, OAuth redirect, боты). Должен совпадать с тем, что в `.env`: схема, хост и порт (если не 443/80). `WEB_BASE_URL` в типичном single-host Docker Compose обычно такой же.
 
-**Почему для интеграций нужен HTTPS**
+Exlogare **не требует HTTPS жёстко в коде** — по умолчанию `http://localhost:8080`. Достаточно ли HTTP, зависит от **режима интеграции** и от того, **где** крутится GitLab/GitHub. Не все ставят Exlogare на публичный VPS; локальные и домашние установки тоже поддерживаются.
 
-- **Вебхуки** — GitLab, GitHub и Bitbucket отправляют `POST` на `{PUBLIC_BASE_URL}/api/...` со своих серверов. Они не могут вызвать `http://localhost` или адрес в частной сети без туннеля или reverse proxy.
-- **OAuth callback** — после авторизации в GitLab/GitHub провайдер перенаправляет браузер на URL из `PUBLIC_BASE_URL`. Redirect URI должен совпадать с зарегистрированным; в production обычно требуется **HTTPS**.
-- **Проверка TLS** — при регистрации вебхуков Git-хосты проверяют сертификат. HTTP или self-signed TLS часто не проходят без отключения проверки (не рекомендуется).
-- **Мессенджеры** — Telegram и аналоги тоже требуют публичный **HTTPS**-endpoint для входящих обновлений.
+### Сценарии развёртывания
 
-Для локального UI без удалённых вебхуков подойдёт `http://localhost:8080`. Если GitLab на другом хосте (например `git.example.com`), используйте публичное имя с HTTPS, например `https://exlogare.example.com`.
+Выберите строку под ваш случай:
 
-`WEB_BASE_URL` в типичном single-host Docker Compose обычно совпадает с `PUBLIC_BASE_URL`.
+| Сценарий | Пример `PUBLIC_BASE_URL` | Подходит для | Заметки |
+|----------|--------------------------|--------------|---------|
+| **Только локальный UI** | `http://localhost:8080` | Dashboard, настройки, ручные тесты | Значение по умолчанию. Входящие вызовы от Git-хоста не нужны. |
+| **OAuth + polling** | `http://localhost:8080` | Self-hosted или cloud GitLab/GitHub, когда Exlogare **сам опрашивает** CI | Exlogare ходит **наружу** к Git-хосту; вебхуки не обязательны. Удобно для ноутбука или домашнего ПК. |
+| **Одна машина / LAN** | `http://192.168.1.10:8080` или `http://exlogare.local:8080` | Вебхуки от GitLab на **том же хосте или в LAN** | Не используйте `localhost` в URL вебхука — GitLab в Docker часто не видит `127.0.0.1` хоста. Укажите LAN IP или внутреннее DNS-имя. |
+| **DDNS + HTTP (домашняя лаба)** | `http://exlogare.myddns.net:8080` | Вебхуки self-hosted GitLab через интернет | Проброс порта на роутере. GitLab должен достучаться до URL; для `http://` Exlogare отключает проверку SSL при регистрации хука. Не подходит для **GitHub.com** (нужен HTTPS) и **Telegram**. |
+| **HTTPS-туннель (без VPS)** | `https://xyz.trycloudflare.com` или ngrok | Вебхуки от cloud GitLab/GitHub с ПК дома | Cloudflare Tunnel, ngrok и т.п. дают публичный HTTPS на процесс на вашей машине. Часто проще всего для локальной отладки вебхуков. |
+| **Production-сервер** | `https://exlogare.example.com` | Все интеграции, мессенджеры, cloud OAuth | Рекомендуется для постоянной установки. Валидный TLS, порт 443. |
+
+### Когда HTTPS действительно обязателен
+
+- **Вебхуки GitHub.com** — GitHub шлёт хуки только на **HTTPS**.
+- **Telegram-боты** — webhook URL только **HTTPS**.
+- **Cloud OAuth** — приложения GitLab.com / GitHub.com часто ждут HTTPS redirect URI (кроме чистого localhost в dev).
+- **Self-hosted GitLab** — HTTP-вебхуки разрешены; Exlogare сам ставит `enable_ssl_verification: false` для `http://`. Можно добавить хук вручную в GitLab и отключить проверку SSL там.
+
+### Когда localhost недостаточно
+
+Если Git-хост на **другой машине** (например `git.company.com` или GitLab.com), он не может POST на `http://localhost:8080` вашего ноутбука — для сервера `localhost` это он сам. Варианты:
+
+1. Режим **polling** (входящий URL не нужен).
+2. Проброс через **LAN IP**, **DDNS + port forward** или **HTTPS-туннель**.
+3. Отправка логов из CI через **generic ingest** или `POST /api/analyze` (Exlogare должен быть доступен **раннеру**, не обязательно из интернета).
+
+Dashboard предупреждает, если URL вебхука на `localhost`, а GitLab удалённый — следуйте шагам ручной настройки или смените `PUBLIC_BASE_URL`.
+
+### Примеры `.env`
+
+```env
+# Ноутбук: UI + polling GitLab
+PUBLIC_BASE_URL=http://localhost:8080
+WEB_BASE_URL=http://localhost:8080
+
+# Домашний ПК: вебхуки self-hosted GitLab через DDNS (HTTP)
+PUBLIC_BASE_URL=http://exlogare.myddns.net:8080
+WEB_BASE_URL=http://exlogare.myddns.net:8080
+
+# VPS / production
+PUBLIC_BASE_URL=https://exlogare.example.com
+WEB_BASE_URL=https://exlogare.example.com
+```
 
 ## Разработка
 
@@ -145,7 +182,7 @@ cd web && npm install && npm run dev
 | ----------------- | ----------------------- | ------------------------------------------------------------------------------------------------------ |
 | `IMAGE_TAG`       | `latest`                | Docker-тег для `ghcr.io/exlogare/exlogare-api` и `exlogare-web`. Примеры: `latest-dev`, `1.0.0`.       |
 | `WEB_PORT`        | `8080`                  | Порт на хосте для web-контейнера (nginx).                                                              |
-| `PUBLIC_BASE_URL` | `http://localhost:8080` | **обязательно** Публичный URL API для вебхуков и OAuth. В production должен быть доступен с Git-хоста по **HTTPS**. См. [HTTPS и PUBLIC_BASE_URL](#https-и-public_base_url). |
+| `PUBLIC_BASE_URL` | `http://localhost:8080` | URL API для вебхуков и OAuth. Нужен для режима webhook; при удалённом Git-хосте — LAN/DDNS/туннель. См. [HTTPS и PUBLIC_BASE_URL](#https-и-public_base_url). |
 | `WEB_BASE_URL`    | `http://localhost:8080` | Origin SPA для CORS и ссылок в письмах. В single-host compose обычно совпадает с `PUBLIC_BASE_URL`.    |
 | `APP_ENV`         | `prod`                  | `dev`, `test`, `staging` или `prod`. Влияет на `/docs`, CORS, trusted hosts.                           |
 | `UPDATE_CHECK_ENABLED` | `true`             | При `false` dashboard не обращается к GitHub за новыми релизами (бейдж показывает только установленную версию). |

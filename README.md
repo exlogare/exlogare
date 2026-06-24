@@ -122,18 +122,55 @@ For the default bundled stack, leave the five URL variables unset — Compose bu
 
 ## HTTPS and PUBLIC_BASE_URL
 
-`PUBLIC_BASE_URL` is **required** whenever you connect real CI integrations (GitLab, GitHub, Bitbucket, Jenkins OAuth, messenger bots, etc.). Set it in `.env` to the exact URL that **external systems** use to reach your Exlogare API — scheme, hostname, and port if it is not 443/80.
+`PUBLIC_BASE_URL` is the address **other systems** use to reach your Exlogare API (webhooks, OAuth redirects, messenger bots). It must match what you put in `.env` — scheme, hostname, and port if not 443/80. `WEB_BASE_URL` should usually be the same in the default single-host Docker Compose layout.
 
-**Why HTTPS is required for integrations**
+Exlogare does **not** hard-require HTTPS in code — defaults are `http://localhost:8080`. Whether HTTP is enough depends on **how** you connect CI and **where** GitLab/GitHub runs. Not everyone runs Exlogare on a public VPS; local and home-lab setups are supported with the right mode.
 
-- **Webhooks** — GitLab, GitHub, and Bitbucket send `POST` requests to `{PUBLIC_BASE_URL}/api/...` from their servers. They cannot call `http://localhost` or a private LAN address unless you expose it with a tunnel or reverse proxy.
-- **OAuth callbacks** — After you authorize GitLab/GitHub, the provider redirects the browser to a URL derived from `PUBLIC_BASE_URL`. The redirect URI must match what you registered; most providers expect **HTTPS** in production.
-- **TLS verification** — Git hosts validate the webhook target certificate when registering hooks. Plain HTTP or self-signed TLS often fails unless you disable verification (not recommended).
-- **Messengers** — Telegram and similar bots also need a publicly reachable **HTTPS** endpoint for inbound updates.
+### Deployment scenarios
 
-For local UI testing without remote webhooks, `http://localhost:8080` is fine. For a GitLab instance on another host (e.g. `git.example.com`), use a public hostname with HTTPS, for example `https://exlogare.example.com`.
+Pick the row that matches your setup:
 
-`WEB_BASE_URL` should usually match `PUBLIC_BASE_URL` in the default single-host Docker Compose layout.
+| Scenario | Example `PUBLIC_BASE_URL` | Works for | Notes |
+|----------|---------------------------|-----------|-------|
+| **Local UI only** | `http://localhost:8080` | Dashboard, settings, manual tests | Default. No inbound calls from Git hosts needed. |
+| **OAuth + polling** | `http://localhost:8080` | Self-hosted or cloud GitLab/GitHub when Exlogare **pulls** pipeline status | Exlogare calls **out** to your Git host; webhooks are optional. Good for a laptop or home PC. |
+| **Same machine / LAN** | `http://192.168.1.10:8080` or `http://exlogare.local:8080` | Webhooks from GitLab on the **same host or LAN** | Avoid `localhost` in webhook URLs — GitLab in Docker often cannot reach the host’s `127.0.0.1`. Use the host LAN IP or an internal DNS name GitLab can resolve. |
+| **DDNS + HTTP (home lab)** | `http://exlogare.myddns.net:8080` | Self-hosted GitLab webhooks over the internet | Forward the port on your router. GitLab must reach this URL; Exlogare registers hooks with SSL verification **off** for `http://` URLs. Not suitable for **GitHub.com** (HTTPS required) or **Telegram** bots. |
+| **HTTPS tunnel (no VPS)** | `https://xyz.trycloudflare.com` or ngrok URL | Webhooks from cloud GitLab/GitHub without owning a server | Cloudflare Tunnel, ngrok, etc. give a public HTTPS URL to a process on your PC. Often the simplest way to test webhooks locally. |
+| **Production server** | `https://exlogare.example.com` | All integrations, messengers, cloud OAuth | Recommended for always-on installs. Valid TLS certificate; port 443. |
+
+### When HTTPS is actually required
+
+- **GitHub.com webhooks** — GitHub sends hooks only to **HTTPS** URLs.
+- **Telegram bots** — Telegram accepts webhook URLs over **HTTPS** only.
+- **Cloud OAuth apps** — GitLab.com / GitHub.com app settings often expect HTTPS redirect URIs outside pure localhost dev.
+- **Self-hosted GitLab** — HTTP webhooks are allowed; Exlogare sets `enable_ssl_verification: false` automatically for `http://` hook URLs. You can also add the webhook manually in GitLab and disable SSL verification there.
+
+### When localhost is not enough
+
+If your Git host is on **another machine** (e.g. `git.company.com` or GitLab.com), it cannot POST to `http://localhost:8080` on your laptop — that address points to the Git server itself, not to you. Options:
+
+1. Use **polling** mode (no inbound URL needed).
+2. Expose Exlogare via **LAN IP**, **DDNS + port forward**, or an **HTTPS tunnel**.
+3. Push logs from CI with **generic ingest** or `POST /api/analyze` (Exlogare must be reachable from the runner, not necessarily from the public internet).
+
+The dashboard warns when a webhook URL uses `localhost` and your GitLab is remote — follow the manual webhook steps or change `PUBLIC_BASE_URL`.
+
+### Quick `.env` examples
+
+```env
+# Laptop: UI + GitLab polling only
+PUBLIC_BASE_URL=http://localhost:8080
+WEB_BASE_URL=http://localhost:8080
+
+# Home PC: self-hosted GitLab webhooks via DDNS (HTTP)
+PUBLIC_BASE_URL=http://exlogare.myddns.net:8080
+WEB_BASE_URL=http://exlogare.myddns.net:8080
+
+# VPS / production
+PUBLIC_BASE_URL=https://exlogare.example.com
+WEB_BASE_URL=https://exlogare.example.com
+```
 
 ## Development
 
@@ -161,7 +198,7 @@ Legend: **required** = must be set before first production start; **bootstrap** 
 |----------|---------|-------------|
 | `IMAGE_TAG` | `latest` | Docker tag for `ghcr.io/exlogare/exlogare-api` and `exlogare-web`. Use `latest-dev`, `1.0.0`, etc. |
 | `WEB_PORT` | `8080` | Host port mapped to the web container (nginx). |
-| `PUBLIC_BASE_URL` | `http://localhost:8080` | **required** Public URL of the API as seen by webhooks and OAuth callbacks. Must be reachable from your Git host over **HTTPS** in production. See [HTTPS and PUBLIC_BASE_URL](#https-and-public_base_url). |
+| `PUBLIC_BASE_URL` | `http://localhost:8080` | URL of the API as seen by webhooks and OAuth. Required for webhook mode; use LAN/DDNS/tunnel if Git host is remote. See [HTTPS and PUBLIC_BASE_URL](#https-and-public_base_url). |
 | `WEB_BASE_URL` | `http://localhost:8080` | SPA origin for CORS and links in emails. Usually the same as `PUBLIC_BASE_URL` in single-host compose. |
 | `APP_ENV` | `prod` | `dev`, `test`, `staging`, or `prod`. Controls docs exposure, CORS extras, trusted hosts. |
 | `UPDATE_CHECK_ENABLED` | `true` | When `false`, the dashboard skips GitHub release checks (no outbound calls; version badge shows the installed version only). |
