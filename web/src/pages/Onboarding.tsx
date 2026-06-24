@@ -281,6 +281,7 @@ export default function OnboardingPage() {
           hook_registered: boolean;
           instructions: string[];
           legacy_dc_warning: boolean;
+          webhook_register_error?: string | null;
         }>("/api/integrations/bitbucket/webhook/init", {
           method: "POST",
           body: {
@@ -306,6 +307,7 @@ export default function OnboardingPage() {
           webhook_secret: string;
           hook_registered: boolean;
           instructions: string[];
+          webhook_register_error?: string | null;
         }>("/api/integrations/gitlab/webhook/init", {
           method: "POST",
           body: {
