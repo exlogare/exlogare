@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+
+@lru_cache(maxsize=1)
+def get_app_version() -> str:
+    try:
+        return version("exlogare-selfhost")
+    except PackageNotFoundError:
+        return "1.0.0"
 
 
 class Settings(BaseSettings):
@@ -19,6 +28,7 @@ class Settings(BaseSettings):
     api_port: int = 8000
     public_base_url: str = "http://localhost:8000"
     web_base_url: str = "http://localhost:5180"
+    update_check_enabled: bool = True
 
     database_url: str = "postgresql+asyncpg://exlogare:exlogare@localhost:5432/exlogare"
     sync_database_url: str = "postgresql+psycopg2://exlogare:exlogare@localhost:5432/exlogare"

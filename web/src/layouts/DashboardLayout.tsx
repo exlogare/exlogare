@@ -4,7 +4,6 @@ import {
   BarChart3,
   Gauge,
   Layers,
-  LifeBuoy,
   Link2,
   LogOut,
   Menu,
@@ -17,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../lib/auth";
 import clsx from "clsx";
 import LangSwitcher from "../components/LangSwitcher";
+import VersionBadge from "../components/VersionBadge";
 
 type NavItem = {
   to: string;
@@ -62,8 +62,11 @@ export default function DashboardLayout() {
         </div>
         <div className="min-w-0">
           <div className="text-sm font-semibold">{t("common.app_name")}</div>
-          <div className="text-[10px] font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
-            {t("common.app_edition")}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="text-[10px] font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
+              {t("common.app_edition")}
+            </div>
+            <VersionBadge />
           </div>
           <div className="truncate text-xs text-slate-500">{me?.tenant.name}</div>
         </div>
@@ -91,13 +94,6 @@ export default function DashboardLayout() {
       <div className="shrink-0 space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
         <LangSwitcher className="w-full justify-center" />
         <div className="truncate text-xs text-slate-500">{me?.user.email}</div>
-        <a
-          href="mailto:admin@localhost"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 hover:text-brand-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-300"
-        >
-          <LifeBuoy className="h-3.5 w-3.5" />
-          {t("nav.support")}
-        </a>
         <button
           className="btn-secondary w-full"
           onClick={async () => {
@@ -129,9 +125,12 @@ export default function DashboardLayout() {
           </div>
         <div className="flex flex-col items-start">
           <span className="text-sm font-semibold">{t("common.app_name")}</span>
-          <span className="text-[10px] font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
-            {t("common.app_edition")}
-          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
+              {t("common.app_edition")}
+            </span>
+            <VersionBadge />
+          </div>
         </div>
         </div>
         <div className="w-10" />

@@ -11,7 +11,7 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
+from app.core.config import get_app_version, get_settings
 from app.core.db import get_db
 from app.core.logging import get_logger
 from app.core.rate_limit import RateLimitExceeded, check_rate_limit
@@ -42,6 +42,21 @@ _WORKER_HEARTBEAT_TTL_SECS = 120
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+class VersionResponse(BaseModel):
+    version: str
+    edition: str = "community"
+    update_check_enabled: bool = True
+
+
+@router.get("/version", response_model=VersionResponse)
+async def get_version() -> VersionResponse:
+    settings = get_settings()
+    return VersionResponse(
+        version=get_app_version(),
+        update_check_enabled=settings.update_check_enabled,
+    )
 
 
 @router.get("/status", response_model=StatusResponse)

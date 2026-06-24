@@ -103,6 +103,21 @@ docker compose -f docker-compose.yml -f docker-compose.external.yml up -d
 
 Для bundled-стека по умолчанию **не задавайте** эти пять URL — Compose соберёт их из `POSTGRES_*` и имён сервисов `postgres` / `redis`.
 
+## HTTPS и PUBLIC_BASE_URL
+
+`PUBLIC_BASE_URL` **обязателен**, если вы подключаете реальные CI-интеграции (GitLab, GitHub, Bitbucket, Jenkins OAuth, боты мессенджеров и т.д.). Укажите в `.env` точный URL, по которому **внешние системы** достучатся до API Exlogare — схема, хост и порт, если это не 443/80.
+
+**Почему для интеграций нужен HTTPS**
+
+- **Вебхуки** — GitLab, GitHub и Bitbucket отправляют `POST` на `{PUBLIC_BASE_URL}/api/...` со своих серверов. Они не могут вызвать `http://localhost` или адрес в частной сети без туннеля или reverse proxy.
+- **OAuth callback** — после авторизации в GitLab/GitHub провайдер перенаправляет браузер на URL из `PUBLIC_BASE_URL`. Redirect URI должен совпадать с зарегистрированным; в production обычно требуется **HTTPS**.
+- **Проверка TLS** — при регистрации вебхуков Git-хосты проверяют сертификат. HTTP или self-signed TLS часто не проходят без отключения проверки (не рекомендуется).
+- **Мессенджеры** — Telegram и аналоги тоже требуют публичный **HTTPS**-endpoint для входящих обновлений.
+
+Для локального UI без удалённых вебхуков подойдёт `http://localhost:8080`. Если GitLab на другом хосте (например `git.example.com`), используйте публичное имя с HTTPS, например `https://exlogare.example.com`.
+
+`WEB_BASE_URL` в типичном single-host Docker Compose обычно совпадает с `PUBLIC_BASE_URL`.
+
 ## Разработка
 
 ```bash
@@ -130,9 +145,10 @@ cd web && npm install && npm run dev
 | ----------------- | ----------------------- | ------------------------------------------------------------------------------------------------------ |
 | `IMAGE_TAG`       | `latest`                | Docker-тег для `ghcr.io/exlogare/exlogare-api` и `exlogare-web`. Примеры: `latest-dev`, `1.0.0`.       |
 | `WEB_PORT`        | `8080`                  | Порт на хосте для web-контейнера (nginx).                                                              |
-| `PUBLIC_BASE_URL` | `http://localhost:8080` | Публичный URL API для вебхуков и OAuth. Должен совпадать с тем, как пользователи открывают приложение. |
+| `PUBLIC_BASE_URL` | `http://localhost:8080` | **обязательно** Публичный URL API для вебхуков и OAuth. В production должен быть доступен с Git-хоста по **HTTPS**. См. [HTTPS и PUBLIC_BASE_URL](#https-и-public_base_url). |
 | `WEB_BASE_URL`    | `http://localhost:8080` | Origin SPA для CORS и ссылок в письмах. В single-host compose обычно совпадает с `PUBLIC_BASE_URL`.    |
 | `APP_ENV`         | `prod`                  | `dev`, `test`, `staging` или `prod`. Влияет на `/docs`, CORS, trusted hosts.                           |
+| `UPDATE_CHECK_ENABLED` | `true`             | При `false` dashboard не обращается к GitHub за новыми релизами (бейдж показывает только установленную версию). |
 
 
 ### База данных (Postgres)

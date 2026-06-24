@@ -38,7 +38,9 @@
     "no": "Нет",
     "optional": "необязательно",
     "language": "Язык",
-    "enable": "Включить"
+    "enable": "Включить",
+    "update_available": "Обновление",
+    "update_available_hint": "Установлена версия {{version}}. Доступен более новый релиз на GitHub."
   },
   "confirm": {
     "default_title": "Вы уверены?"

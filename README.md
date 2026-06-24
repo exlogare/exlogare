@@ -120,6 +120,21 @@ This skips the `postgres` and `redis` services from the default stack. Only `api
 
 For the default bundled stack, leave the five URL variables unset — Compose builds them from `POSTGRES_*` and the internal `postgres` / `redis` service names.
 
+## HTTPS and PUBLIC_BASE_URL
+
+`PUBLIC_BASE_URL` is **required** whenever you connect real CI integrations (GitLab, GitHub, Bitbucket, Jenkins OAuth, messenger bots, etc.). Set it in `.env` to the exact URL that **external systems** use to reach your Exlogare API — scheme, hostname, and port if it is not 443/80.
+
+**Why HTTPS is required for integrations**
+
+- **Webhooks** — GitLab, GitHub, and Bitbucket send `POST` requests to `{PUBLIC_BASE_URL}/api/...` from their servers. They cannot call `http://localhost` or a private LAN address unless you expose it with a tunnel or reverse proxy.
+- **OAuth callbacks** — After you authorize GitLab/GitHub, the provider redirects the browser to a URL derived from `PUBLIC_BASE_URL`. The redirect URI must match what you registered; most providers expect **HTTPS** in production.
+- **TLS verification** — Git hosts validate the webhook target certificate when registering hooks. Plain HTTP or self-signed TLS often fails unless you disable verification (not recommended).
+- **Messengers** — Telegram and similar bots also need a publicly reachable **HTTPS** endpoint for inbound updates.
+
+For local UI testing without remote webhooks, `http://localhost:8080` is fine. For a GitLab instance on another host (e.g. `git.example.com`), use a public hostname with HTTPS, for example `https://exlogare.example.com`.
+
+`WEB_BASE_URL` should usually match `PUBLIC_BASE_URL` in the default single-host Docker Compose layout.
+
 ## Development
 
 ```bash
@@ -146,9 +161,10 @@ Legend: **required** = must be set before first production start; **bootstrap** 
 |----------|---------|-------------|
 | `IMAGE_TAG` | `latest` | Docker tag for `ghcr.io/exlogare/exlogare-api` and `exlogare-web`. Use `latest-dev`, `1.0.0`, etc. |
 | `WEB_PORT` | `8080` | Host port mapped to the web container (nginx). |
-| `PUBLIC_BASE_URL` | `http://localhost:8080` | Public URL of the API as seen by webhooks and OAuth callbacks. Must match how users reach the app. |
+| `PUBLIC_BASE_URL` | `http://localhost:8080` | **required** Public URL of the API as seen by webhooks and OAuth callbacks. Must be reachable from your Git host over **HTTPS** in production. See [HTTPS and PUBLIC_BASE_URL](#https-and-public_base_url). |
 | `WEB_BASE_URL` | `http://localhost:8080` | SPA origin for CORS and links in emails. Usually the same as `PUBLIC_BASE_URL` in single-host compose. |
 | `APP_ENV` | `prod` | `dev`, `test`, `staging`, or `prod`. Controls docs exposure, CORS extras, trusted hosts. |
+| `UPDATE_CHECK_ENABLED` | `true` | When `false`, the dashboard skips GitHub release checks (no outbound calls; version badge shows the installed version only). |
 
 ### Database (Postgres)
 

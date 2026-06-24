@@ -37,7 +37,7 @@ from app.api.routes import (
     tokens_router,
     webhook_router,
 )
-from app.core.config import get_settings
+from app.core.config import get_app_version, get_settings
 from app.core.csrf import CSRFMiddleware
 from app.core.logging import configure_logging, get_logger
 from app.services.oauth.gitlab import GitLabOAuthRefreshFailed
@@ -95,7 +95,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
         title="Exlogare Community Edition",
-        version="0.1.0",
+        version=get_app_version(),
         description="Self-hosted Community Edition — CI/CD failure analyzer with OpenAI-compatible LLM",
         docs_url="/docs" if settings.app_env != "prod" else None,
         lifespan=_lifespan,

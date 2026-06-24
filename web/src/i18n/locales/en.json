@@ -38,7 +38,9 @@
     "no": "No",
     "optional": "optional",
     "language": "Language",
-    "enable": "Enable"
+    "enable": "Enable",
+    "update_available": "Update",
+    "update_available_hint": "Version {{version}} is installed. A newer release is available on GitHub."
   },
   "confirm": {
     "default_title": "Are you sure?"
