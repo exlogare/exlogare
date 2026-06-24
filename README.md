@@ -85,7 +85,7 @@ By default Compose starts bundled `postgres` and `redis` containers. To use **yo
 
 | Variable | Redis DB | Purpose |
 |----------|----------|---------|
-| `REDIS_URL` | `0` | App cache, rate limits, heartbeats |
+| `REDIS_URL` | `0` | App cache, rate limits |
 | `CELERY_BROKER_URL` | `1` | Celery message broker |
 | `CELERY_RESULT_BACKEND` | `2` | Celery task results |
 
@@ -217,7 +217,7 @@ Legend: **required** = must be set before first production start; **bootstrap** 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `REDIS_URL` | *(compose)* | General Redis (cache, rate limits, heartbeats). DB index `0`. Set for external Redis. |
+| `REDIS_URL` | *(compose)* | General Redis (cache, rate limits). DB index `0`. Set for external Redis. |
 | `CELERY_BROKER_URL` | *(compose)* | Celery message broker. DB index `1`. Set for external Redis. |
 | `CELERY_RESULT_BACKEND` | *(compose)* | Celery result backend. DB index `2`. Set for external Redis. |
 
@@ -253,13 +253,19 @@ Legend: **required** = must be set before first production start; **bootstrap** 
 | `LLM_API_KEY` | — | API key for the chosen endpoint. For Ollama/local, any non-empty value (e.g. `ollama`). |
 | `LLM_MODEL` | `gpt-4o-mini` | Model name on the selected endpoint. |
 | `LLM_TEMPERATURE` | `0.1` | Sampling temperature. |
-| `LLM_MAX_TOKENS` | `600` | Max tokens in the completion response. |
+| `LLM_MAX_TOKENS` | `900` | Max tokens in the completion response. |
 | `LLM_JSON_MODE` | `true` | Request `response_format=json_object`. Set `false` if the endpoint does not support JSON mode (fallback parsing is used). |
 | `LLM_TAIL_LINES` | `500` | Last N log lines sent to the model. |
 | `LLM_TOKEN_BUDGET` | `2500` | Approximate token budget for the log excerpt. |
-| `LLM_SYSTEM_PROMPT` | — | **required if `LLM_ENABLED=true`** Inline system prompt. Use `\n` for newlines. |
-| `LLM_SYSTEM_PROMPT_FILE` | — | Alternative to inline prompt: path to a text file inside the container (e.g. mount `/config/system_prompt.txt`). |
+| `LLM_SYSTEM_PROMPT` | *(empty)* | Optional inline system prompt (overrides the file). Use `\n` for newlines. |
+| `LLM_SYSTEM_PROMPT_FILE` | `config/llm_system_prompt.txt` | Bundled RCA prompt shipped with CE. Defines the JSON schema (`root_cause`, `explanation`, **`fix_suggestion`**, …) and requires actionable fix steps. Edit or mount your own copy. |
 | `LLM_USER_PROMPT_TEMPLATE` | *(built-in)* | Template with `{header}`, `{log_excerpt}`, `{project_path}`. |
+
+**Bundled LLM prompt**
+
+Community Edition ships [`config/llm_system_prompt.txt`](config/llm_system_prompt.txt) — copied into the API image at `/app/config/llm_system_prompt.txt`. You only need to set `LLM_API_KEY` (and optionally `LLM_BASE_URL` / `LLM_MODEL`); no prompt tuning required for normal RCA.
+
+The prompt tells the model to return **concrete** `fix_suggestion` text (file paths, commands, config changes from the log), not generic placeholders. If you override the prompt, keep the exact JSON keys: `root_cause`, `explanation`, `fix_suggestion`, `severity`, `confidence`, `needs_more_context`, `missing_context_hint`.
 
 **LLM backend examples**
 

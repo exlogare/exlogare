@@ -15,7 +15,6 @@ celery_app = Celery(
         "app.workers.tasks",
         "app.workers.polling",
         "app.workers.retention",
-        "app.workers.heartbeat",
     ],
 )
 
@@ -31,7 +30,6 @@ celery_app.conf.update(
         "app.workers.tasks.deliver_webhook": {"queue": "notifications"},
         "app.workers.polling.poll_all_oauth_tenants": {"queue": "default"},
         "app.workers.retention.enforce_retention": {"queue": "default"},
-        "app.workers.heartbeat.write_worker_heartbeat": {"queue": "default"},
     },
     beat_schedule={
         "poll-oauth-tenants": {
@@ -41,10 +39,6 @@ celery_app.conf.update(
         "enforce-retention-daily": {
             "task": "app.workers.retention.enforce_retention",
             "schedule": crontab(hour=3, minute=17),
-        },
-        "worker-heartbeat": {
-            "task": "app.workers.heartbeat.write_worker_heartbeat",
-            "schedule": 30.0,
         },
     },
 )

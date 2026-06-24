@@ -51,6 +51,8 @@ def _normalize_analysis_data(data: dict) -> dict:
         "fix": "fix_suggestion",
         "fixSuggestion": "fix_suggestion",
         "suggestion": "fix_suggestion",
+        "suggested_fix": "fix_suggestion",
+        "suggested_fixes": "fix_suggestion",
         "details": "explanation",
         "summary": "explanation",
         "analysis": "explanation",
@@ -58,7 +60,10 @@ def _normalize_analysis_data(data: dict) -> dict:
     }
     for src, dst in aliases.items():
         if dst not in out and src in out:
-            out[dst] = out[src]
+            val = out[src]
+            if isinstance(val, list):
+                val = "; ".join(str(item) for item in val if item)
+            out[dst] = val
     if isinstance(out.get("severity"), str):
         out["severity"] = out["severity"].strip().lower()
     if "confidence" not in out:
@@ -71,7 +76,12 @@ def _normalize_analysis_data(data: dict) -> dict:
     if "explanation" not in out and out.get("root_cause"):
         out["explanation"] = str(out["root_cause"])
     if "fix_suggestion" not in out and out.get("root_cause"):
-        out["fix_suggestion"] = "Review the failing CI step and apply the suggested fix from the log."
+        out["fix_suggestion"] = (
+            "The model did not return fix_suggestion. Re-run the analysis or "
+            "check LLM_SYSTEM_PROMPT_FILE and LLM_MAX_TOKENS."
+        )
+        out["needs_more_context"] = True
+        out.setdefault("missing_context_hint", "missing_fix_suggestion")
     return out
 
 

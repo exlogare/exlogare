@@ -55,7 +55,7 @@ def outbound_webhooks_allowed(_spec: object) -> bool:
     return True
 
 
-def api_keys_allowed(_spec: object) -> bool:
+def api_keys_allowed(_tenant: Tenant | None, _spec: object) -> bool:
     return True
 
 

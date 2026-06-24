@@ -204,7 +204,7 @@ async def upsert_cluster(
                 "status": case(
                     (
                         FailureCluster.status == ClusterStatus.RESOLVED,
-                        ClusterStatus.ACTIVE.value,
+                        ClusterStatus.ACTIVE,
                     ),
                     else_=FailureCluster.status,
                 ),

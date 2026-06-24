@@ -68,7 +68,7 @@ web (nginx + SPA)  →  api (FastAPI + init_db)
 
 | Переменная | Redis DB | Назначение |
 |------------|----------|------------|
-| `REDIS_URL` | `0` | Кэш приложения, rate limit, heartbeat |
+| `REDIS_URL` | `0` | Кэш приложения, rate limit |
 | `CELERY_BROKER_URL` | `1` | Брокер Celery |
 | `CELERY_RESULT_BACKEND` | `2` | Результаты задач Celery |
 
@@ -205,7 +205,7 @@ cd web && npm install && npm run dev
 
 | Переменная              | По умолчанию | Описание                                   |
 | ----------------------- | ------------ | ------------------------------------------ |
-| `REDIS_URL`             | *(compose)*  | Redis: кэш, rate limit, heartbeat. DB index `0`. Для внешнего Redis.     |
+| `REDIS_URL`             | *(compose)*  | Redis: кэш, rate limit. DB index `0`. Для внешнего Redis.     |
 | `CELERY_BROKER_URL`     | *(compose)*  | Брокер Celery. DB index `1`. Для внешнего Redis. |
 | `CELERY_RESULT_BACKEND` | *(compose)*  | Backend результатов Celery. DB index `2`. Для внешнего Redis. |
 
@@ -249,13 +249,20 @@ cd web && npm install && npm run dev
 | `LLM_API_KEY`              | —              | API-ключ endpoint'а. Для Ollama/local — любое непустое значение (напр. `ollama`).                                    |
 | `LLM_MODEL`                | `gpt-4o-mini`  | Имя модели на выбранном endpoint.                                                                                    |
 | `LLM_TEMPERATURE`          | `0.1`          | Temperature сэмплирования.                                                                                           |
-| `LLM_MAX_TOKENS`           | `600`          | Максимум токенов в ответе.                                                                                           |
+| `LLM_MAX_TOKENS`           | `900`          | Максимум токенов в ответе.                                                                                           |
 | `LLM_JSON_MODE`            | `true`         | Запрашивать `response_format=json_object`. `false`, если endpoint не поддерживает JSON mode (есть fallback-парсинг). |
 | `LLM_TAIL_LINES`           | `500`          | Сколько последних строк лога отправлять в модель.                                                                    |
 | `LLM_TOKEN_BUDGET`         | `2500`         | Приблизительный бюджет токенов на excerpt лога.                                                                      |
-| `LLM_SYSTEM_PROMPT`        | —              | **обязательно при `LLM_ENABLED=true`** System prompt inline. `\n` для переносов строк.                               |
-| `LLM_SYSTEM_PROMPT_FILE`   | —              | Альтернатива inline: путь к файлу внутри контейнера (напр. смонтировать `/config/system_prompt.txt`).                |
+| `LLM_SYSTEM_PROMPT`        | *(пусто)*      | Опционально: inline system prompt (перекрывает файл). `\n` для переносов строк.                                      |
+| `LLM_SYSTEM_PROMPT_FILE`   | `config/llm_system_prompt.txt` | Встроенный RCA-промпт CE. Задаёт JSON-схему (`root_cause`, `explanation`, **`fix_suggestion`**, …) и требует конкретных шагов исправления. Можно редактировать или смонтировать свой файл. |
 | `LLM_USER_PROMPT_TEMPLATE` | *(встроенный)* | Шаблон с `{header}`, `{log_excerpt}`, `{project_path}`.                                                              |
+
+
+**Встроенный LLM-промпт**
+
+Community Edition поставляется с [`config/llm_system_prompt.txt`](config/llm_system_prompt.txt) — в образе API путь `/app/config/llm_system_prompt.txt`. Достаточно указать `LLM_API_KEY` (и при необходимости `LLM_BASE_URL` / `LLM_MODEL`); для обычного RCA промпт настраивать не нужно.
+
+Промпт требует **конкретный** `fix_suggestion` (пути к файлам, команды, изменения конфигура из лога), а не общие фразы вроде «проверьте лог». Если переопределяете промпт, сохраняйте те же ключи JSON: `root_cause`, `explanation`, `fix_suggestion`, `severity`, `confidence`, `needs_more_context`, `missing_context_hint`.
 
 
 **Примеры LLM backend**
