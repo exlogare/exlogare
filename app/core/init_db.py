@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 
@@ -29,7 +29,47 @@ def _slugify(name: str) -> str:
 async def init_database() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await ensure_schema()
     log.info("init_db.schema_ready")
+
+
+async def ensure_schema() -> None:
+    """Apply additive schema tweaks that create_all cannot do on existing DBs."""
+    from sqlalchemy import inspect, text
+
+    async with engine.begin() as conn:
+        dialect = conn.dialect.name
+
+        def _user_columns(sync_conn) -> set[str]:
+            insp = inspect(sync_conn)
+            if not insp.has_table("users"):
+                return set()
+            return {c["name"] for c in insp.get_columns("users")}
+
+        cols = await conn.run_sync(_user_columns)
+        if not cols:
+            return
+
+        if "oidc_sub" not in cols:
+            if dialect == "postgresql":
+                await conn.execute(
+                    text("ALTER TABLE users ADD COLUMN IF NOT EXISTS oidc_sub VARCHAR(255)")
+                )
+            else:
+                await conn.execute(text("ALTER TABLE users ADD COLUMN oidc_sub VARCHAR(255)"))
+            log.info("init_db.added_column", table="users", column="oidc_sub")
+
+        if dialect == "postgresql":
+            await conn.execute(text("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL"))
+            await conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_oidc_sub "
+                    "ON users (oidc_sub) WHERE oidc_sub IS NOT NULL"
+                )
+            )
+        elif dialect == "sqlite":
+            # SQLite create_all on fresh DBs already matches the model; skip ALTER.
+            pass
 
 
 async def bootstrap_admin() -> None:
@@ -63,7 +103,7 @@ async def bootstrap_admin() -> None:
             email=email,
             display_name=email.split("@", 1)[0],
             password_hash=hash_password(password),
-            email_verified_at=datetime.now(tz=timezone.utc),
+            email_verified_at=datetime.now(tz=UTC),
         )
         session.add(user)
         await session.flush()

@@ -7,6 +7,7 @@ const DOC_PATHS: Record<string, string> = {
   webhooks: "/docs/webhooks",
   "self-hosting": "/docs/self-hosting",
   oauth: "/docs/oauth",
+  "local-llm": "/docs/self-hosting#bring-your-own-local-model",
 };
 
 function docsLocale(lang?: string): string {

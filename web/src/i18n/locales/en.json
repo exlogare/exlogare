@@ -56,7 +56,9 @@
     "password": "Password",
     "signing_in": "Signing in…",
     "sign_out": "Sign out",
-    "signin_failed": "Sign-in failed"
+    "signin_failed": "Sign-in failed",
+    "sso_sign_in": "Sign in with {{name}}",
+    "or_password": "or password"
   },
   "nav": {
     "overview": "Overview",
@@ -429,8 +431,10 @@
     "connect_oauth_title": "Connect via OAuth",
     "connect_oauth_self_hint": "For self-hosted GitLab, register an Application in your instance (Admin Area or your user profile) with redirect URL",
     "connect_oauth_self_hint_github": "For GitHub Enterprise, register an OAuth App with redirect URL",
+    "connect_oauth_self_hint_gitflic": "For self-hosted GitFlic, register an OAuth application in your instance with redirect URL",
     "connect_oauth_scopes_hint": "Use scopes that allow API access, typically api and read_user (some GitLab versions show read_api).",
     "connect_oauth_scopes_hint_github": "Use a scope that allows reading repos and writing feedback — typically `repo` (private repos) and `read:user` for the OAuth app.",
+    "connect_oauth_scopes_hint_gitflic": "Use scopes that allow reading projects, failed pipelines, and registering webhooks — typically PROJECT_READ, PROJECT_WRITE, PROJECT_EDIT, USER_READ.",
     "watch_mode_unavailable": "Could not determine an allowed integration mode. Reload the page or try again.",
     "app_id": "Application ID",
     "secret": "Secret",
@@ -487,16 +491,17 @@
     "demo_no_channels": "No notification channels configured yet.",
     "demo_delivered": "delivered",
     "demo_not_sent": "not sent",
-    "finish": "Finish onboarding"
+    "finish": "Finish onboarding",
+    "llm_hint": "RCA uses the LLM from your .env (LLM_BASE_URL / LLM_MODEL). For Ollama or another local model, see Settings → AI or the local model docs."
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Team identity, privacy and audit log. Integrations, messengers, API keys and webhooks live under Integrations.",
+    "subtitle": "Team identity and audit log. Integrations, messengers, API keys and webhooks live under Integrations.",
     "tabs": {
       "general": "General",
       "team": "Team",
-      "privacy": "Privacy",
-      "audit": "Audit"
+      "audit": "Audit",
+      "ai": "AI"
     },
     "team": "Team",
     "team_name": "Team name",
@@ -519,11 +524,6 @@
     "audit_log": "Audit log",
     "audit_log_desc": "Read-only timeline of admin events: token creation/revocation, integration changes. Retained per your retention policy.",
     "audit_log_open": "Open audit log",
-    "privacy": "Privacy",
-    "privacy_desc": "Exlogare publishes a quarterly aggregated \"State of CI Failures\" report. Only failures seen by at least 5 distinct teams ever appear, and we never include team / project / repo identifiers. Toggle off to exclude this team from the aggregation set.",
-    "privacy_share_label": "Share anonymised stats",
-    "privacy_read_more": "Read the full privacy notice",
-    "privacy_saved": "Privacy preference saved.",
     "api_tokens": "API tokens",
     "api_tokens_desc": "Bearer credentials for the universal CI ingest endpoints (Jenkins, CircleCI, TeamCity, Drone, GitHub Actions, GitLab CI, generic). Raw secrets are shown only once at creation.",
     "api_tokens_count": "{{current}} of {{max}} tokens used",
@@ -570,7 +570,21 @@
     "quickstart_other": "Other / generic",
     "copy_snippet": "Copy snippet",
     "feedback_status_check": "Commit status check",
-    "feedback_status_check_hint": "GitHub: posts a Check Run with severity-aware conclusion. Bitbucket: posts a Build Status keyed exlogare/rca. Both surfaces deep-link to the analysis on Exlogare. Fires alongside (not instead of) the comment cascade and is best-effort: a 4xx from the host doesn't stop the comment from landing."
+    "feedback_status_check_hint": "GitHub: posts a Check Run with severity-aware conclusion. Bitbucket: posts a Build Status keyed exlogare/rca. Both surfaces deep-link to the analysis on Exlogare. Fires alongside (not instead of) the comment cascade and is best-effort: a 4xx from the host doesn't stop the comment from landing.",
+    "ai_title": "Language model",
+    "ai_desc": "RCA uses the OpenAI-compatible endpoint configured in .env (OpenAI, Ollama, vLLM, LM Studio, …). Change LLM_* and restart the API to switch models.",
+    "ai_enabled": "LLM enabled",
+    "ai_configured": "API key configured",
+    "ai_yes": "Yes",
+    "ai_no": "No",
+    "ai_endpoint": "Endpoint",
+    "ai_model": "Model",
+    "ai_test": "Test connection",
+    "ai_testing": "Testing…",
+    "ai_test_ok": "Connected ({{ms}} ms)",
+    "ai_test_fail": "Connection failed",
+    "ai_docs": "Local model setup",
+    "ai_admin_only": "Only owners and admins can view LLM settings."
   },
   "stats": {
     "title": "Stats",

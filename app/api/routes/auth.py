@@ -69,7 +69,11 @@ async def login(
 
     email = body.email.strip().lower()
     user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
-    if user is None or not verify_password(body.password, user.password_hash):
+    if (
+        user is None
+        or not user.password_hash
+        or not verify_password(body.password, user.password_hash)
+    ):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     membership = (

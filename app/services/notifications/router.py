@@ -53,9 +53,8 @@ class ChannelRouter:
         spec = get_plan_spec(tenant)
         if not notifications_allowed(spec):
             log.info(
-                "notifications.skipped_plan_disabled",
+                "notifications.skipped_disabled",
                 tenant_id=str(tenant_id),
-                plan=spec.code.value,
             )
             return []
 

@@ -381,7 +381,7 @@ async def watch_repos(
     if mode.value not in bitbucket_modes_allowed(principal.tenant, spec):
         raise HTTPException(
             status_code=400,
-            detail="This integration mode is not available on your plan",
+            detail="This integration mode is not available",
         )
     max_r = effective_max_bitbucket_repos(spec)
     if max_r is None:
@@ -842,7 +842,7 @@ async def change_connection(
         if new_mode.value not in bitbucket_modes_allowed(principal.tenant, spec):
             raise HTTPException(
                 status_code=400,
-                detail="This integration mode is not available on your plan",
+                detail="This integration mode is not available",
             )
         conn.mode = new_mode
     if body.mode is None and not feedback_changed:

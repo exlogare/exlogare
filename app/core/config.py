@@ -45,6 +45,15 @@ class Settings(BaseSettings):
     admin_password: str = ""
     admin_tenant_name: str = "Default"
 
+    oidc_enabled: bool = False
+    oidc_issuer: str = ""
+    oidc_client_id: str = ""
+    oidc_client_secret: str = ""
+    oidc_redirect_uri: str = ""
+    oidc_scopes: str = "openid email profile"
+    oidc_auto_provision: bool = True
+    oidc_display_name: str = "SSO"
+
     retention_days: int = 365
 
     llm_enabled: bool = True

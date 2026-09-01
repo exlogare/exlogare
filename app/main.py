@@ -13,6 +13,7 @@ from app.api.routes import (
     analyze_router,
     audit_router,
     auth_gitlab_router,
+    auth_oidc_router,
     auth_router,
     clusters_public_router,
     clusters_router,
@@ -30,6 +31,7 @@ from app.api.routes import (
     integrations_messengers_router,
     integrations_outbound_webhooks_router,
     capabilities_router,
+    llm_router,
     public_api_router,
     public_router,
     stats_router,
@@ -160,6 +162,7 @@ def create_app() -> FastAPI:
     app.include_router(ingest_generic_router)
     app.include_router(analyze_router)
     app.include_router(auth_router)
+    app.include_router(auth_oidc_router)
     app.include_router(auth_gitlab_router)
     app.include_router(tenants_router)
     app.include_router(tokens_router)
@@ -170,6 +173,7 @@ def create_app() -> FastAPI:
     app.include_router(integrations_messengers_router)
     app.include_router(integrations_outbound_webhooks_router)
     app.include_router(capabilities_router)
+    app.include_router(llm_router)
     app.include_router(public_router)
     app.include_router(public_api_router)
     app.include_router(stats_router)

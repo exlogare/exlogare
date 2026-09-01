@@ -5,7 +5,7 @@ import { ApiError, api, clearCsrfCache } from "./api";
 type AuthContextValue = {
   me: Me | null;
   loading: boolean;
-  /** Hydrate the ``me`` state after a successful ``POST /api/auth/verify``. */
+  /** Hydrate the ``me`` state after a successful login. */
   login: () => Promise<Me>;
   /** Invalidate the server-side session and clear local context. */
   logout: () => Promise<void>;

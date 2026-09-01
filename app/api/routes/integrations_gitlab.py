@@ -347,7 +347,7 @@ async def watch_projects(
     if mode.value not in gitlab_modes_allowed(principal.tenant, spec_watch):
         raise HTTPException(
             status_code=400,
-            detail="This integration mode is not available on your plan",
+            detail="This integration mode is not available",
         )
 
     ordered_unique: list[str] = []
@@ -733,13 +733,13 @@ async def _re_enable_gitlab_project_connection(
         if n_enabled >= max_r:
             raise HTTPException(
                 status_code=400,
-                detail="GitLab repository limit reached for this plan",
+                detail="GitLab repository limit reached",
             )
 
     if conn.mode.value not in gitlab_modes_allowed(tenant, spec):
         raise HTTPException(
             status_code=400,
-            detail="This integration mode is not available on your plan",
+            detail="This integration mode is not available",
         )
 
     await ensure_group_fresh_for_connection(session, conn)
@@ -896,7 +896,7 @@ async def change_connection_mode(
     if new_mode.value not in gitlab_modes_allowed(principal.tenant, spec):
         raise HTTPException(
             status_code=400,
-            detail="This integration mode is not available on your plan",
+            detail="This integration mode is not available",
         )
 
     old_mode = conn.mode

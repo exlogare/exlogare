@@ -524,7 +524,7 @@ async def watch_projects(
     if body.mode not in allowed_modes:
         raise HTTPException(
             status_code=403,
-            detail=f"Mode '{body.mode}' is not available on your plan.",
+            detail=f"Mode '{body.mode}' is not available.",
         )
     cap = effective_max_gitflic_repos(spec)
     if cap is not None:

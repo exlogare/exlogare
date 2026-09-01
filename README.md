@@ -27,8 +27,6 @@
 
 Open-source Community Edition of Exlogare — self-hosted CI/CD failure analysis with AI root-cause reports. Deploy with Docker Compose.
 
-Community Edition has no cloud billing, usage quotas, or paid tiers — all features (API keys, messengers, outbound webhooks) are enabled on your instance.
-
 ## Quick start
 
 ```bash
@@ -52,9 +50,55 @@ docker compose pull && docker compose up -d
 ## Features
 
 - **CI integrations** — GitLab, GitHub, Bitbucket, GitFlic, Jenkins, generic ingest
-- **AI root-cause analysis** — any OpenAI-compatible LLM (OpenAI, Ollama, vLLM, LiteLLM, Azure, DashScope, …)
+- **AI root-cause analysis** — any OpenAI-compatible LLM, including **your local model** (Ollama, vLLM, LM Studio)
+- **SSO login** — optional OpenID Connect (Keycloak and other OIDC IdPs)
 - **Dashboard** — analyses, recurring failures, project stats
 - **Docker Compose** — postgres, redis, api, worker, beat, web
+
+## Bring your own local model
+
+Exlogare talks to any OpenAI-compatible `/v1/chat/completions` endpoint. For a fully self-hosted stack, point `LLM_*` at Ollama (or vLLM / LM Studio) on the host or another container.
+
+```env
+LLM_ENABLED=true
+LLM_BASE_URL=http://host.docker.internal:11434/v1
+LLM_API_KEY=ollama
+LLM_MODEL=llama3.1
+LLM_JSON_MODE=false
+```
+
+Notes:
+
+- Compose maps `host.docker.internal` → host gateway for `api` and `worker`, so Ollama on the host is reachable from containers.
+- On some Linux setups use `http://172.17.0.1:11434/v1` instead.
+- Set any non-empty `LLM_API_KEY` for local servers that do not authenticate.
+- If the model rejects JSON mode, set `LLM_JSON_MODE=false` (fallback parsing still works).
+- After changing `.env`, restart API/worker. Settings → **AI** shows the active endpoint and can run a connectivity test.
+
+| Backend | `LLM_BASE_URL` | `LLM_MODEL` | `LLM_API_KEY` |
+|---------|----------------|-------------|---------------|
+| Ollama | `http://host.docker.internal:11434/v1` | `llama3.1` | `ollama` |
+| vLLM | `http://vllm:8000/v1` | `meta-llama/…` | `local` |
+| LM Studio | `http://host.docker.internal:1234/v1` | *(from UI)* | `lm-studio` |
+| OpenAI | *(empty)* | `gpt-4o-mini` | `sk-…` |
+
+## OpenID Connect (Keycloak)
+
+Optional SSO beside email/password. Configure a **confidential** client with Standard flow enabled and Valid redirect URI:
+
+`{PUBLIC_BASE_URL}/api/auth/oidc/callback`
+
+```env
+OIDC_ENABLED=true
+OIDC_ISSUER=https://keycloak.example.com/realms/exlogare
+OIDC_CLIENT_ID=exlogare
+OIDC_CLIENT_SECRET=…
+OIDC_SCOPES=openid email profile
+OIDC_AUTO_PROVISION=true
+OIDC_DISPLAY_NAME=Keycloak
+```
+
+The IdP must return an `email` claim. With `OIDC_AUTO_PROVISION=true`, first login creates a member in the bootstrap tenant (create the admin via `ADMIN_*` first). Login page shows **Sign in with Keycloak** when enabled.
 
 ## Docker images
 
@@ -239,6 +283,18 @@ Legend: **required** = must be set before first production start; **bootstrap** 
 | `ADMIN_EMAIL` | — | **bootstrap** Admin email. Required on first start when `users` table is empty; ignored afterwards. |
 | `ADMIN_PASSWORD` | — | **bootstrap** Admin password (min 8 chars). Not rotated on restart. |
 | `ADMIN_TENANT_NAME` | `Default` | **bootstrap** Name of the initial organization/tenant. |
+
+### OpenID Connect (optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OIDC_ENABLED` | `false` | Enable SSO login button and OIDC routes. |
+| `OIDC_ISSUER` | — | IdP issuer URL (Keycloak: `…/realms/<realm>`). |
+| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | — | Confidential client credentials. |
+| `OIDC_REDIRECT_URI` | `{PUBLIC_BASE_URL}/api/auth/oidc/callback` | Must match the IdP client redirect URI. |
+| `OIDC_SCOPES` | `openid email profile` | Space-separated scopes (`email` required). |
+| `OIDC_AUTO_PROVISION` | `true` | Create a member on first SSO login. |
+| `OIDC_DISPLAY_NAME` | `SSO` | Label on the login button. |
 
 ### Data retention
 

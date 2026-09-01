@@ -8,8 +8,6 @@
 
 Open-source Community Edition Exlogare — self-hosted анализ падений CI/CD с AI root-cause отчётами. Развёртывание через Docker Compose.
 
-Community Edition не использует облачный биллинг, квоты и платные тарифы — все функции (API-ключи, мессенджеры, outbound webhooks) включены на вашем инстансе.
-
 ## Быстрый старт
 
 ```bash
@@ -33,9 +31,55 @@ docker compose pull && docker compose up -d
 ## Возможности
 
 - **Интеграции CI** — GitLab, GitHub, Bitbucket, GitFlic, Jenkins, generic ingest
-- **AI root-cause analysis** — любой OpenAI-compatible LLM (OpenAI, Ollama, vLLM, LiteLLM, Azure, DashScope, …)
+- **AI root-cause analysis** — любой OpenAI-compatible LLM, включая **свою локальную модель** (Ollama, vLLM, LM Studio)
+- **SSO** — опциональный OpenID Connect (Keycloak и другие OIDC IdP)
 - **Dashboard** — анализы, повторяющиеся падения, статистика по проектам
 - **Docker Compose** — postgres, redis, api, worker, beat, web
+
+## Своя локальная модель
+
+Exlogare ходит в любой OpenAI-compatible `/v1/chat/completions`. Для полностью автономного стека укажите Ollama (или vLLM / LM Studio) на хосте или в другом контейнере.
+
+```env
+LLM_ENABLED=true
+LLM_BASE_URL=http://host.docker.internal:11434/v1
+LLM_API_KEY=ollama
+LLM_MODEL=llama3.1
+LLM_JSON_MODE=false
+```
+
+Замечания:
+
+- Compose пробрасывает `host.docker.internal` → host-gateway для `api` и `worker`.
+- На части Linux-хостов используйте `http://172.17.0.1:11434/v1`.
+- Для локальных серверов без auth достаточно любого непустого `LLM_API_KEY`.
+- Если модель не умеет JSON mode — `LLM_JSON_MODE=false`.
+- После смены `.env` перезапустите API/worker. В **Настройки → AI** виден текущий endpoint и есть проверка связи.
+
+| Backend | `LLM_BASE_URL` | `LLM_MODEL` | `LLM_API_KEY` |
+|---------|----------------|-------------|---------------|
+| Ollama | `http://host.docker.internal:11434/v1` | `llama3.1` | `ollama` |
+| vLLM | `http://vllm:8000/v1` | `meta-llama/…` | `local` |
+| LM Studio | `http://host.docker.internal:1234/v1` | *(из UI)* | `lm-studio` |
+| OpenAI | *(пусто)* | `gpt-4o-mini` | `sk-…` |
+
+## OpenID Connect (Keycloak)
+
+Опциональный SSO рядом с email/password. Создайте **confidential** client со Standard flow и Valid redirect URI:
+
+`{PUBLIC_BASE_URL}/api/auth/oidc/callback`
+
+```env
+OIDC_ENABLED=true
+OIDC_ISSUER=https://keycloak.example.com/realms/exlogare
+OIDC_CLIENT_ID=exlogare
+OIDC_CLIENT_SECRET=…
+OIDC_SCOPES=openid email profile
+OIDC_AUTO_PROVISION=true
+OIDC_DISPLAY_NAME=Keycloak
+```
+
+IdP должен отдавать claim `email`. При `OIDC_AUTO_PROVISION=true` первый вход создаёт участника в bootstrap-тенанте (сначала поднимите админа через `ADMIN_*`).
 
 ## Docker-образы
 
@@ -231,6 +275,20 @@ cd web && npm install && npm run dev
 | `ADMIN_EMAIL`       | —            | **bootstrap** Email администратора. Обязателен при первом запуске (пустая таблица `users`); далее игнорируется. |
 | `ADMIN_PASSWORD`    | —            | **bootstrap** Пароль admin (мин. 8 символов). При перезапуске не меняется.                                      |
 | `ADMIN_TENANT_NAME` | `Default`    | **bootstrap** Название начальной организации/tenant.                                                            |
+
+
+### OpenID Connect (опционально)
+
+
+| Переменная | По умолчанию | Описание |
+| ---------- | ------------ | -------- |
+| `OIDC_ENABLED` | `false` | Включить SSO-кнопку и OIDC-роуты. |
+| `OIDC_ISSUER` | — | Issuer IdP (Keycloak: `…/realms/<realm>`). |
+| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | — | Credentials confidential client. |
+| `OIDC_REDIRECT_URI` | `{PUBLIC_BASE_URL}/api/auth/oidc/callback` | Должен совпадать с redirect URI клиента. |
+| `OIDC_SCOPES` | `openid email profile` | Scopes (`email` обязателен). |
+| `OIDC_AUTO_PROVISION` | `true` | Создавать участника при первом SSO-входе. |
+| `OIDC_DISPLAY_NAME` | `SSO` | Текст на кнопке входа. |
 
 
 ### Хранение данных

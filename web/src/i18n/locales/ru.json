@@ -56,7 +56,9 @@
     "password": "Пароль",
     "signing_in": "Вход…",
     "sign_out": "Выйти",
-    "signin_failed": "Ошибка входа"
+    "signin_failed": "Ошибка входа",
+    "sso_sign_in": "Войти через {{name}}",
+    "or_password": "или пароль"
   },
   "nav": {
     "overview": "Обзор",
@@ -428,7 +430,9 @@
     "mode_webhook_b3": "PAT (необязательно) автоматически регистрирует hook",
     "connect_oauth_title": "Подключение через OAuth",
     "connect_oauth_self_hint": "Для self-hosted GitLab создайте Application в вашем инстансе (Admin Area или профиль пользователя) с redirect URL",
+    "connect_oauth_self_hint_gitflic": "Для self-hosted GitFlic создайте OAuth-приложение в вашем инстансе с redirect URL",
     "connect_oauth_scopes_hint": "Укажите scope с доступом к API — обычно api и read_user (в некоторых версиях GitLab вместо read_user указан read_api).",
+    "connect_oauth_scopes_hint_gitflic": "Укажите scopes, дающие доступ к проектам, чтению и регистрации webhook — обычно PROJECT_READ, PROJECT_WRITE, PROJECT_EDIT, USER_READ.",
     "watch_mode_unavailable": "Не удалось определить допустимый режим интеграции. Обновите страницу или попробуйте позже.",
     "app_id": "Application ID",
     "secret": "Secret",
@@ -483,16 +487,17 @@
     "demo_no_channels": "Каналы уведомлений пока не настроены.",
     "demo_delivered": "доставлено",
     "demo_not_sent": "не отправлено",
-    "finish": "Завершить настройку"
+    "finish": "Завершить настройку",
+    "llm_hint": "RCA идёт через LLM из .env (LLM_BASE_URL / LLM_MODEL). Для Ollama или другой локальной модели см. Настройки → AI или документацию."
   },
   "settings": {
     "title": "Настройки",
-    "subtitle": "Идентичность команды, приватность и журнал аудита. Интеграции, мессенджеры, API-ключи и вебхуки — в разделе Интеграции.",
+    "subtitle": "Идентичность команды и журнал аудита. Интеграции, мессенджеры, API-ключи и вебхуки — в разделе Интеграции.",
     "tabs": {
       "general": "Общие",
       "team": "Команда",
-      "privacy": "Приватность",
-      "audit": "Аудит"
+      "audit": "Аудит",
+      "ai": "AI"
     },
     "team": "Команда",
     "team_name": "Название команды",
@@ -515,11 +520,6 @@
     "audit_log": "Журнал аудита",
     "audit_log_desc": "Хронология админских событий: создание/отзыв токенов, изменения интеграций. Срок хранения задаётся политикой retention.",
     "audit_log_open": "Открыть журнал",
-    "privacy": "Приватность",
-    "privacy_desc": "Exlogare ежеквартально публикует анонимизированный отчёт «State of CI Failures». В отчёт попадают только падения, которые видели минимум 5 разных команд — без названий команд, проектов и репозиториев. Отключите, чтобы исключить эту команду из агрегации.",
-    "privacy_share_label": "Делиться анонимной статистикой",
-    "privacy_read_more": "Полный текст privacy notice",
-    "privacy_saved": "Настройки приватности сохранены.",
     "api_tokens": "API-токены",
     "api_tokens_desc": "Bearer-ключи для универсальных CI-ingest эндпоинтов (Jenkins, CircleCI, TeamCity, Drone, GitHub Actions, GitLab CI, generic). Секрет показывается только один раз при создании.",
     "api_tokens_count": "{{current}} из {{max}} токенов",
@@ -566,7 +566,21 @@
     "quickstart_other": "Другая / общая",
     "copy_snippet": "Скопировать сниппет",
     "feedback_status_check": "Статус-чек коммита",
-    "feedback_status_check_hint": "GitHub: создаёт Check Run с conclusion по тяжести инцидента. Bitbucket: создаёт Build Status с ключом exlogare/rca. Обе поверхности ведут по ссылке на разбор в Exlogare. Срабатывает дополнительно к каскаду комментариев и является best-effort: 4xx от хоста не останавливает публикацию комментария."
+    "feedback_status_check_hint": "GitHub: создаёт Check Run с conclusion по тяжести инцидента. Bitbucket: создаёт Build Status с ключом exlogare/rca. Обе поверхности ведут по ссылке на разбор в Exlogare. Срабатывает дополнительно к каскаду комментариев и является best-effort: 4xx от хоста не останавливает публикацию комментария.",
+    "ai_title": "Языковая модель",
+    "ai_desc": "RCA использует OpenAI-compatible endpoint из .env (OpenAI, Ollama, vLLM, LM Studio, …). Чтобы сменить модель, обновите LLM_* и перезапустите API.",
+    "ai_enabled": "LLM включён",
+    "ai_configured": "API-ключ задан",
+    "ai_yes": "Да",
+    "ai_no": "Нет",
+    "ai_endpoint": "Endpoint",
+    "ai_model": "Модель",
+    "ai_test": "Проверить связь",
+    "ai_testing": "Проверяем…",
+    "ai_test_ok": "Подключено ({{ms}} мс)",
+    "ai_test_fail": "Ошибка подключения",
+    "ai_docs": "Настройка локальной модели",
+    "ai_admin_only": "Настройки LLM доступны только владельцам и админам."
   },
   "stats": {
     "title": "Статистика",

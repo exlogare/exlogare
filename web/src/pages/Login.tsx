@@ -1,5 +1,5 @@
-import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -11,14 +11,43 @@ type SessionResponse = {
   token_type: string;
 };
 
+type OidcStatus = {
+  enabled: boolean;
+  display_name: string;
+};
+
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [oidc, setOidc] = useState<OidcStatus | null>(null);
+
+  useEffect(() => {
+    const oidcError = searchParams.get("oidc_error");
+    if (oidcError) {
+      setError(oidcError);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const status = await api<OidcStatus>("/api/auth/oidc/status");
+        if (!cancelled) setOidc(status);
+      } catch {
+        if (!cancelled) setOidc({ enabled: false, display_name: "SSO" });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -58,6 +87,20 @@ export default function LoginPage() {
         <div className="card">
           <h2 className="mb-2 text-lg font-semibold">{t("auth.signIn")}</h2>
           <p className="mb-6 text-sm text-slate-500">{t("auth.password_intro")}</p>
+
+          {oidc?.enabled && (
+            <div className="mb-6 space-y-3">
+              <a href="/api/auth/oidc/login" className="btn-secondary flex w-full items-center justify-center">
+                {t("auth.sso_sign_in", { name: oidc.display_name })}
+              </a>
+              <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-slate-400">
+                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                {t("auth.or_password")}
+                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+              </div>
+            </div>
+          )}
+
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium">{t("auth.email")}</label>

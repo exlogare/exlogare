@@ -49,7 +49,7 @@ def _assert_webhooks_allowed(principal: CurrentPrincipal) -> None:
     if not outbound_webhooks_allowed(spec):
         raise HTTPException(
             status_code=403,
-            detail="Outbound webhooks require Startup plan or higher",
+            detail="Outbound webhooks are not available",
         )
 
 

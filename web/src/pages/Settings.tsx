@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
+  Brain,
   FileSearch,
   MessageSquare,
   Trash2,
@@ -15,6 +16,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useConfirm } from "../components/ui/ConfirmDialog";
 import { toast } from "../lib/toast";
+import { docsUrl } from "../lib/requisites";
 
 type Member = { user_id: string; email: string; role: string };
 
@@ -32,10 +34,24 @@ type TenantCurrent = {
   feedback_defaults: FeedbackDefaults;
 };
 
-type TabId = "general" | "team" | "audit";
+type LlmStatus = {
+  llm_enabled: boolean;
+  llm_configured: boolean;
+  llm_base_url: string;
+  llm_model: string;
+};
+
+type LlmPing = {
+  ok: boolean;
+  latency_ms: number | null;
+  error: string | null;
+  model: string | null;
+};
+
+type TabId = "general" | "team" | "audit" | "ai";
 
 export default function SettingsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { me } = useAuth();
   const qc = useQueryClient();
   const isAdmin = me?.role === "owner" || me?.role === "admin";
@@ -47,6 +63,7 @@ export default function SettingsPage() {
     () => [
       { id: "general", label: t("settings.tabs.general"), visible: true },
       { id: "team", label: t("settings.tabs.team"), visible: true },
+      { id: "ai", label: t("settings.tabs.ai"), visible: true },
       { id: "audit", label: t("settings.tabs.audit"), visible: !!isAdmin },
     ],
     [t, isAdmin],
@@ -167,8 +184,114 @@ export default function SettingsPage() {
         />
       )}
 
+      {activeTab === "ai" && (
+        <AiTab isAdmin={isAdmin} docsHref={docsUrl("local-llm", i18n.language)} />
+      )}
+
       {activeTab === "audit" && isAdmin && <AuditTab />}
     </div>
+  );
+}
+
+function AiTab({ isAdmin, docsHref }: { isAdmin: boolean; docsHref: string }) {
+  const { t } = useTranslation();
+  const [pinging, setPinging] = useState(false);
+  const [pingResult, setPingResult] = useState<LlmPing | null>(null);
+
+  const status = useQuery({
+    queryKey: ["llm-status"],
+    queryFn: () => api<LlmStatus>("/api/llm/status"),
+    enabled: isAdmin,
+  });
+
+  async function testConnection() {
+    setPinging(true);
+    setPingResult(null);
+    try {
+      const res = await api<LlmPing>("/api/llm/ping", { method: "POST" });
+      setPingResult(res);
+      if (res.ok) {
+        toast.success(t("settings.ai_test_ok", { ms: res.latency_ms ?? 0 }));
+      } else {
+        toast.error(res.error || t("settings.ai_test_fail"));
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("settings.ai_test_fail"));
+    } finally {
+      setPinging(false);
+    }
+  }
+
+  if (!isAdmin) {
+    return (
+      <section className="card">
+        <p className="text-sm text-slate-500">{t("settings.ai_admin_only")}</p>
+      </section>
+    );
+  }
+
+  const data = status.data;
+
+  return (
+    <section className="card space-y-4">
+      <div className="flex items-center gap-2">
+        <Brain className="h-5 w-5 text-brand-600" aria-hidden />
+        <h2 className="text-lg font-semibold">{t("settings.ai_title")}</h2>
+      </div>
+      <p className="text-sm text-slate-500">{t("settings.ai_desc")}</p>
+
+      {status.isLoading && <p className="text-sm text-slate-500">…</p>}
+      {status.isError && (
+        <p className="text-sm text-red-600">
+          {status.error instanceof Error ? status.error.message : t("toast.unknown_error")}
+        </p>
+      )}
+      {data && (
+        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-slate-500">{t("settings.ai_enabled")}</dt>
+            <dd className="font-medium">{data.llm_enabled ? t("settings.ai_yes") : t("settings.ai_no")}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">{t("settings.ai_configured")}</dt>
+            <dd className="font-medium">
+              {data.llm_configured ? t("settings.ai_yes") : t("settings.ai_no")}
+            </dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-slate-500">{t("settings.ai_endpoint")}</dt>
+            <dd className="break-all font-mono text-xs">{data.llm_base_url}</dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-slate-500">{t("settings.ai_model")}</dt>
+            <dd className="font-mono text-sm">{data.llm_model}</dd>
+          </div>
+        </dl>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={pinging || !data?.llm_configured}
+          onClick={() => void testConnection()}
+        >
+          {pinging ? t("settings.ai_testing") : t("settings.ai_test")}
+        </button>
+        <a
+          href={docsHref}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm font-medium text-brand-600 hover:underline"
+        >
+          {t("settings.ai_docs")} →
+        </a>
+      </div>
+
+      {pingResult && !pingResult.ok && pingResult.error && (
+        <p className="text-sm text-red-600">{pingResult.error}</p>
+      )}
+    </section>
   );
 }
 

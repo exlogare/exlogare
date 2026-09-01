@@ -188,9 +188,8 @@ async def schedule_webhook_fanout(
     spec = get_plan_spec(tenant)
     if not outbound_webhooks_allowed(spec):
         log.debug(
-            "outbound_webhook.skipped_plan_disabled",
+            "outbound_webhook.skipped_disabled",
             tenant_id=str(tenant_id),
-            plan=spec.code.value,
         )
         return []
 

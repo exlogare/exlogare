@@ -96,7 +96,7 @@ async def create_token(
     if not api_keys_allowed(principal.tenant, spec):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Current plan does not allow API keys",
+            detail="API keys are not available",
         )
 
     cap = max_api_keys_for(spec)

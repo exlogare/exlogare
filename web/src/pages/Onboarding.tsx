@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { toast } from "../lib/toast";
+import { docsUrl } from "../lib/requisites";
 import LangSwitcher from "../components/LangSwitcher";
 import IngestQuickstart from "../components/IngestQuickstart";
 import type { GitLabProject, WatchProjectsResponse } from "../lib/types";
@@ -891,7 +892,7 @@ export default function OnboardingPage() {
                       <p className="text-sm text-slate-500">
                         {ciTarget === "github"
                           ? t("onboarding.connect_oauth_self_hint_github")
-                          : t("onboarding.connect_oauth_self_hint")}{" "}
+                          : ciTarget === "gitflic" ? t("onboarding.connect_oauth_self_hint_gitflic") : t("onboarding.connect_oauth_self_hint")}{" "}
                         <code className="rounded bg-slate-100 px-1 py-0.5 text-xs dark:bg-slate-800">
                           {caps.isPending && !caps.data ? "…" : redirectUriForConnect ?? "—"}
                         </code>
@@ -899,7 +900,7 @@ export default function OnboardingPage() {
                       <p className="text-sm text-slate-500">
                         {ciTarget === "github"
                           ? t("onboarding.connect_oauth_scopes_hint_github")
-                          : t("onboarding.connect_oauth_scopes_hint")}
+                          : ciTarget === "gitflic" ? t("onboarding.connect_oauth_scopes_hint_gitflic") : t("onboarding.connect_oauth_scopes_hint")}
                       </p>
                       <div>
                         <label className="label">{t("onboarding.app_id")}</label>
@@ -1845,7 +1846,7 @@ function MessengerStep({
 type DemoNotification = { connection_id: string; channel: string; ok: boolean };
 
 function DemoStep({ onDone }: { onDone: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [running, setRunning] = useState<string | null>(null);
   const [result, setResult] = useState<{
     analysis: Record<string, unknown>;
@@ -1926,8 +1927,19 @@ function DemoStep({ onDone }: { onDone: () => void }) {
         </div>
       )}
 
-      <div className="flex items-center justify-end pt-4">
-        <button className="btn-primary" onClick={onDone}>
+      <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-slate-500">
+          {t("onboarding.llm_hint")}{" "}
+          <a
+            href={docsUrl("local-llm", i18n.language)}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-brand-600 hover:underline"
+          >
+            docs
+          </a>
+        </p>
+        <button className="btn-primary shrink-0" onClick={onDone}>
           {t("onboarding.finish")} <ExternalLink className="h-4 w-4" />
         </button>
       </div>

@@ -300,7 +300,7 @@ async def watch_repos(
         raise HTTPException(status_code=400, detail="Invalid mode") from exc
     spec = get_plan_spec(principal.tenant)
     if mode.value not in github_modes_allowed(principal.tenant, spec):
-        raise HTTPException(status_code=400, detail="This integration mode is not available on your plan")
+        raise HTTPException(status_code=400, detail="This integration mode is not available")
     max_r = effective_max_github_repos(spec)
     if max_r is None:
         budget = None
@@ -617,7 +617,7 @@ async def change_connection(
             if n_en >= max_r:
                 raise HTTPException(
                     status_code=400,
-                    detail="GitHub repository limit reached for this plan",
+                    detail="GitHub repository limit reached",
                 )
         await _reenable_github_project(session, principal.tenant, conn)
     hook_revoked = False
@@ -629,7 +629,7 @@ async def change_connection(
         spec = get_plan_spec(principal.tenant)
         if new_mode.value not in github_modes_allowed(principal.tenant, spec):
             raise HTTPException(
-                status_code=400, detail="This integration mode is not available on your plan"
+                status_code=400, detail="This integration mode is not available"
             )
         if new_mode != conn.mode:
             old = conn.mode

@@ -3,6 +3,7 @@ from app.api.routes.analyze import router as analyze_router
 from app.api.routes.audit import router as audit_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.auth_gitlab import router as auth_gitlab_router
+from app.api.routes.auth_oidc import router as auth_oidc_router
 from app.api.routes.capabilities import router as capabilities_router
 from app.api.routes.clusters import (
     public_router as clusters_public_router,
@@ -23,6 +24,7 @@ from app.api.routes.integrations_messengers import router as integrations_messen
 from app.api.routes.integrations_outbound_webhooks import (
     router as integrations_outbound_webhooks_router,
 )
+from app.api.routes.llm import router as llm_router
 from app.api.routes.public import router as public_router
 from app.api.routes.public_api import router as public_api_router
 from app.api.routes.stats import router as stats_router
@@ -36,6 +38,7 @@ __all__ = [
     "audit_router",
     "auth_router",
     "auth_gitlab_router",
+    "auth_oidc_router",
     "clusters_public_router",
     "clusters_router",
     "demo_router",
@@ -47,6 +50,7 @@ __all__ = [
     "integrations_messengers_router",
     "integrations_outbound_webhooks_router",
     "capabilities_router",
+    "llm_router",
     "public_router",
     "public_api_router",
     "stats_router",
